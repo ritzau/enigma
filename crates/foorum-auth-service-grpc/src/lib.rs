@@ -1,22 +1,21 @@
-use crate::auth::service::AuthService;
-use crate::auth::{AccessToken, UserId};
+use foorum_auth_service::FoorumAuthService;
 use sqlx::types::Uuid;
 use tonic::{Request, Response, Status};
+use foorum_auth::{AccessToken, UserId};
+use foorum_auth_grpc::{auth_server, CreateAccountReply, CreateAccountRequest, DeleteAccountReply, DeleteAccountRequest, GetSessionReply, GetSessionRequest, ListAccountsReply, ListAccountsRequest, LoginReply, LoginRequest, PurgeExpiredSessionsReply, PurgeExpiredSessionsRequest, User};
 
-tonic::include_proto!("auth");
-
-pub struct GrpcAuthService<T: AuthService> {
+pub struct GrpcAuthService<T: FoorumAuthService> {
     auth_service: T,
 }
 
-impl<T: AuthService> GrpcAuthService<T> {
+impl<T: FoorumAuthService> GrpcAuthService<T> {
     pub fn new(auth_service: T) -> Self {
         GrpcAuthService { auth_service }
     }
 }
 
 #[tonic::async_trait]
-impl<T: AuthService + 'static> auth_server::Auth for GrpcAuthService<T> {
+impl<T: FoorumAuthService + 'static> auth_server::Auth for GrpcAuthService<T> {
     async fn create_account(
         &self,
         request: Request<CreateAccountRequest>,

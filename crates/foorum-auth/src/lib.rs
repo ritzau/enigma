@@ -1,8 +1,17 @@
-use crate::auth::UserId;
-use tonic::async_trait;
-use uuid::Uuid;
+use async_trait::async_trait;
+use sqlx::types::Uuid;
 
-pub mod grpc;
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub struct UserId(pub i64);
+
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub struct UserName(pub String);
+
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub struct UserHash(pub String);
+
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub struct AccessToken(pub Uuid);
 
 #[async_trait]
 pub trait FoorumAuthClient {

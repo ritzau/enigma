@@ -1,9 +1,10 @@
-use crate::auth::{AccessToken, UserHash, UserId, UserName};
-use sqlx::types::Uuid;
+use tonic::async_trait;
 use std::error::Error;
 use std::time::Duration;
+use sqlx::types::Uuid;
 use time::OffsetDateTime;
-use tonic::async_trait;
+use foorum_auth::{AccessToken, UserHash, UserId, UserName};
+
 pub mod postgres;
 
 #[async_trait]

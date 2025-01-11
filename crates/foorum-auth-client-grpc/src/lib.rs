@@ -1,14 +1,9 @@
-use crate::auth::client::FoorumAuthClient;
-use crate::auth::service::grpc::auth_client::AuthClient;
-use crate::auth::service::grpc::{
-    CreateAccountReply, CreateAccountRequest, DeleteAccountRequest, GetSessionReply,
-    GetSessionRequest, ListAccountsReply, ListAccountsRequest, LoginReply, LoginRequest,
-    PurgeExpiredSessionsReply, PurgeExpiredSessionsRequest,
-};
-use crate::auth::UserId;
+use foorum_auth_grpc::auth_client::AuthClient;
 use tonic::transport::Channel;
 use tonic::{async_trait, Response};
+use foorum_auth_grpc::{CreateAccountReply, CreateAccountRequest, DeleteAccountRequest, GetSessionReply, GetSessionRequest, ListAccountsReply, ListAccountsRequest, LoginReply, LoginRequest, PurgeExpiredSessionsReply, PurgeExpiredSessionsRequest};
 use uuid::Uuid;
+use foorum_auth::{FoorumAuthClient, UserId};
 
 pub struct GrpcAuthClient {
     client: AuthClient<Channel>,

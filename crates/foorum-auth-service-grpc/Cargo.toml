@@ -1,0 +1,11 @@
+[package]
+name = "foorum-auth-service-grpc"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+sqlx = "0.8.3"
+tonic = "0.12.3"
+foorum-auth-service = { path = "../foorum-auth-service" }
+foorum-auth = { path = "../foorum-auth" }
+foorum-auth-grpc = { path = "../foorum-auth-grpc" }

@@ -1,7 +1,7 @@
-use foorum::auth::service::db::postgres::PostgresAuthDatabase;
-use foorum::auth::service::grpc::auth_server::AuthServer;
-use foorum::auth::service::grpc::GrpcAuthService;
-use foorum::auth::service::DefaultAuthService;
+use foorum_auth_service::db::postgres::PostgresAuthDatabase;
+use foorum_auth_grpc::auth_server::AuthServer;
+use foorum_auth_service_grpc::GrpcAuthService;
+use foorum_auth_service::DefaultAuthService;
 use tonic::transport::Server;
 
 #[tokio::main]

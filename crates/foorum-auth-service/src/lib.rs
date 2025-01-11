@@ -1,14 +1,13 @@
-use crate::auth::{AccessToken, UserHash, UserId, UserName};
-use db::AuthDatabase;
-use sqlx::types::Uuid;
-use std::error::Error;
 use tonic::async_trait;
+use std::error::Error;
+use sqlx::types::Uuid;
+use db::AuthDatabase;
+use foorum_auth::{AccessToken, UserHash, UserId, UserName};
 
 pub mod db;
-pub mod grpc;
 
 #[async_trait]
-pub trait AuthService: Send + Sync {
+pub trait FoorumAuthService: Send + Sync {
     async fn create_account(&self, username: &str, password: &str) -> Result<i64, Box<dyn Error>>;
 
     async fn delete_account(&self, user_id: &UserId) -> Result<(), Box<dyn Error>>;
@@ -36,7 +35,7 @@ impl<T: AuthDatabase> DefaultAuthService<T> {
 }
 
 #[async_trait]
-impl<T: AuthDatabase> AuthService for DefaultAuthService<T> {
+impl<T: AuthDatabase> FoorumAuthService for DefaultAuthService<T> {
     async fn create_account(&self, username: &str, password: &str) -> Result<i64, Box<dyn Error>> {
         let id = self
             .db

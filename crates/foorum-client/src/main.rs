@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
-use foorum::auth::client::grpc::GrpcAuthClient;
-use foorum::auth::client::FoorumAuthClient;
-use foorum::auth::UserId;
+use foorum_auth::UserId;
+use foorum_auth_client_grpc::GrpcAuthClient;
+use foorum_auth::FoorumAuthClient;
 use uuid::Uuid;
 
 #[derive(Parser)]

@@ -1,0 +1,12 @@
+[package]
+name = "foorum-auth-service"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+chrono = "0.4.39"
+dotenvy = "0.15.7"
+foorum-auth = { path = "../foorum-auth" }
+sqlx = { version = "0.8.3", features = ["postgres", "runtime-tokio-native-tls", "time", "uuid"] }
+time = "0.3.37"
+tonic = "0.12.3"

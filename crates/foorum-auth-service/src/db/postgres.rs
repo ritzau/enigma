@@ -1,14 +1,14 @@
-use crate::auth::service::db::AuthDatabase;
-use crate::auth::{AccessToken, UserHash, UserId, UserName};
-use chrono::Utc;
-use sqlx::types::time::OffsetDateTime;
-use sqlx::types::Uuid;
 use sqlx::{Pool, Postgres};
-use std::env;
+use tonic::async_trait;
 use std::error::Error;
 use std::time::Duration;
+use sqlx::types::Uuid;
+use chrono::Utc;
+use time::OffsetDateTime;
 use time::format_description::well_known::Rfc3339;
-use tonic::async_trait;
+use std::env;
+use foorum_auth::{AccessToken, UserHash, UserId, UserName};
+use crate::db::AuthDatabase;
 
 pub struct PostgresAuthDatabase {
     pool: Pool<Postgres>,
