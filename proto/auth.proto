@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+package auth;
+
+service Auth {
+    rpc CreateAccount (CreateAccountRequest) returns (CreateAccountReply) {}
+    rpc DeleteAccount (DeleteAccountRequest) returns (DeleteAccountReply) {}
+    rpc ListAccounts (ListAccountsRequest) returns (ListAccountsReply) {}
+    rpc Login (LoginRequest) returns (LoginReply) {}
+    rpc GetSession (GetSessionRequest) returns (GetSessionReply) {}
+    rpc PurgeExpiredSessions (PurgeExpiredSessionsRequest) returns (PurgeExpiredSessionsReply) {}
+}
+
+message CreateAccountRequest {
+    string username = 1;
+    string password = 2;
+}
+
+message CreateAccountReply {
+    int64 user_id = 1;
+}
+
+message DeleteAccountRequest {
+    int64 user_id = 1;
+}
+
+message DeleteAccountReply {
+}
+
+message ListAccountsRequest {
+}
+
+message ListAccountsReply {
+    repeated User users = 1;
+}
+
+message User {
+    int64 id = 1;
+    string name = 2;
+}
+
+message LoginRequest {
+    string name = 1;
+    string password = 2;
+}
+
+message LoginReply {
+    string access_token = 1;
+}
+
+message GetSessionRequest {
+    string access_token = 1;
+}
+
+message GetSessionReply {
+    int64 user_id = 1;
+}
+
+message PurgeExpiredSessionsRequest {
+}
+
+message PurgeExpiredSessionsReply {
+    uint64 purged_session_count = 1;
+}

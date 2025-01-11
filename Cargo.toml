@@ -1,0 +1,23 @@
+[package]
+name = "foorum"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "foorum-client"
+path = "src/bin/foorum_client.rs"
+
+[dependencies]
+clap = { version = "4.5.24", features = ["derive"] }
+dotenvy = "0.15.7"
+prost = "0.13.4"
+redis = "0.28.0"
+sqlx = { version = "0.8.3", features = ["postgres", "runtime-tokio-native-tls", "time", "uuid"] }
+tokio = { version = "1.43.0", features = ["rt-multi-thread"] }
+tonic = "0.12.3"
+chrono = "0.4.39"
+time = "0.3.37"
+uuid = { version = "1.11.0", features = ["v4"] }
+
+[build-dependencies]
+tonic-build = "0.12.3"
