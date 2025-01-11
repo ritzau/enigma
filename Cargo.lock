@@ -556,8 +556,8 @@ checksum = "a0d2fde1f7b3d48b8395d5f2de76c18a528bd6a9cdde438df747bfcba3e05d6f"
 name = "foorum-auth"
 version = "0.1.0"
 dependencies = [
- "async-trait",
  "sqlx",
+ "tonic",
 ]
 
 [[package]]
