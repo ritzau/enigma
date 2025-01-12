@@ -1,8 +1,8 @@
-use tonic::async_trait;
-use std::error::Error;
-use sqlx::types::Uuid;
 use db::AuthDatabase;
-use foorum_auth::{AccessToken, UserHash, UserId, UserName};
+use foorum_auth::{AccessToken, PasswordHash, UserId};
+use sqlx::types::Uuid;
+use std::error::Error;
+use tonic::async_trait;
 
 pub mod db;
 
@@ -39,17 +39,29 @@ impl<T: AuthDatabase> FoorumAuthService for DefaultAuthService<T> {
     async fn create_account(&self, username: &str, password: &str) -> Result<i64, Box<dyn Error>> {
         let id = self
             .db
-            .create_account(
-                &UserName(username.to_string()),
-                &UserHash(password.to_string()),
-            )
+            .create_account(&username.into(), &password.into())
             .await?;
 
-        Ok(id.0)
+        Ok(id.value())
     }
 
     async fn delete_account(&self, user_id: &UserId) -> Result<(), Box<dyn Error>> {
         self.db.delete_user(user_id).await
+    }
+
+    async fn login(&self, username: &str, password: &str) -> Result<Uuid, Box<dyn Error>> {
+        let user_id = self.db.user_id(&username.into()).await?;
+
+        let hash = self.db.hash(&user_id).await?;
+
+        if hash == PasswordHash::from(password) {
+            Ok(self
+                .db
+                .create_session(&user_id, std::time::Duration::from_secs(60))
+                .await?)
+        } else {
+            Err("Invalid password".into())
+        }
     }
 
     async fn list_accounts(&self) -> Result<Vec<(i64, String)>, Box<dyn Error>> {
@@ -58,23 +70,8 @@ impl<T: AuthDatabase> FoorumAuthService for DefaultAuthService<T> {
             .list_accounts()
             .await?
             .into_iter()
-            .map(|(id, name)| (id.0, name.0))
+            .map(|(id, name)| (id.value(), name.to_string()))
             .collect())
-    }
-
-    async fn login(&self, username: &str, password: &str) -> Result<Uuid, Box<dyn Error>> {
-        let user_id = self.db.user_id(&UserName(username.to_string())).await?;
-
-        let hash = self.db.hash(&user_id).await?;
-
-        if hash == UserHash(password.to_string()) {
-            Ok(self
-                .db
-                .create_session(&user_id, std::time::Duration::from_secs(60))
-                .await?)
-        } else {
-            Err("Invalid password".into())
-        }
     }
 
     async fn get_session(

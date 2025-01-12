@@ -1,9 +1,13 @@
+use foorum_auth::{FoorumAuthClient, UserId};
 use foorum_auth_grpc::auth_client::AuthClient;
+use foorum_auth_grpc::{
+    CreateAccountReply, CreateAccountRequest, DeleteAccountRequest, GetSessionReply,
+    GetSessionRequest, ListAccountsReply, ListAccountsRequest, LoginReply, LoginRequest,
+    PurgeExpiredSessionsReply, PurgeExpiredSessionsRequest,
+};
 use tonic::transport::Channel;
 use tonic::{async_trait, Response};
-use foorum_auth_grpc::{CreateAccountReply, CreateAccountRequest, DeleteAccountRequest, GetSessionReply, GetSessionRequest, ListAccountsReply, ListAccountsRequest, LoginReply, LoginRequest, PurgeExpiredSessionsReply, PurgeExpiredSessionsRequest};
 use uuid::Uuid;
-use foorum_auth::{FoorumAuthClient, UserId};
 
 pub struct GrpcAuthClient {
     client: AuthClient<Channel>,
@@ -42,10 +46,12 @@ impl FoorumAuthClient for GrpcAuthClient {
 
         let response: Response<CreateAccountReply> = self.client.create_account(request).await?;
 
-        Ok(UserId(response.get_ref().user_id))
+        Ok(UserId::from(response.get_ref().user_id))
     }
     async fn delete_account(&mut self, user_id: &UserId) -> Result<(), Box<dyn std::error::Error>> {
-        let request = tonic::Request::new(DeleteAccountRequest { user_id: user_id.0 });
+        let request = tonic::Request::new(DeleteAccountRequest {
+            user_id: user_id.value(),
+        });
 
         self.client.delete_account(request).await?;
 
@@ -61,7 +67,7 @@ impl FoorumAuthClient for GrpcAuthClient {
 
         let response: Response<GetSessionReply> = self.client.get_session(request).await?;
 
-        Ok(UserId(response.get_ref().user_id))
+        Ok(UserId::from(response.get_ref().user_id))
     }
     async fn list_accounts(&mut self) -> Result<Vec<(UserId, String)>, Box<dyn std::error::Error>> {
         let request = tonic::Request::new(ListAccountsRequest {});
@@ -72,7 +78,7 @@ impl FoorumAuthClient for GrpcAuthClient {
             .get_ref()
             .users
             .iter()
-            .map(|user| (UserId(user.id), user.name.clone()))
+            .map(|user| (UserId::from(user.id), user.name.clone()))
             .collect())
     }
     async fn login(

@@ -1,8 +1,12 @@
+use foorum_auth_grpc::{
+    auth_server, CreateAccountReply, CreateAccountRequest, DeleteAccountReply,
+    DeleteAccountRequest, GetSessionReply, GetSessionRequest, ListAccountsReply,
+    ListAccountsRequest, LoginReply, LoginRequest, PurgeExpiredSessionsReply,
+    PurgeExpiredSessionsRequest, User,
+};
 use foorum_auth_service::FoorumAuthService;
 use sqlx::types::Uuid;
 use tonic::{Request, Response, Status};
-use foorum_auth::{AccessToken, UserId};
-use foorum_auth_grpc::{auth_server, CreateAccountReply, CreateAccountRequest, DeleteAccountReply, DeleteAccountRequest, GetSessionReply, GetSessionRequest, ListAccountsReply, ListAccountsRequest, LoginReply, LoginRequest, PurgeExpiredSessionsReply, PurgeExpiredSessionsRequest, User};
 
 pub struct GrpcAuthService<T: FoorumAuthService> {
     auth_service: T,
@@ -48,7 +52,7 @@ impl<T: FoorumAuthService + 'static> auth_server::Auth for GrpcAuthService<T> {
 
         match self
             .auth_service
-            .delete_account(&UserId(request.user_id))
+            .delete_account(&request.user_id.into())
             .await
         {
             Ok(_) => Ok(Response::new(DeleteAccountReply {})),
@@ -101,13 +105,13 @@ impl<T: FoorumAuthService + 'static> auth_server::Auth for GrpcAuthService<T> {
 
         let (is_valid, user_id) = self
             .auth_service
-            .get_session(&AccessToken(access_token))
+            .get_session(&access_token.into())
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
         if is_valid {
             let reply = GetSessionReply {
-                user_id: user_id.map(|id| id.0).unwrap_or(-1),
+                user_id: user_id.map(|id| id.value()).unwrap_or(-1),
             };
 
             Ok(Response::new(reply))

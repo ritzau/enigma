@@ -1,14 +1,14 @@
+use crate::db::AuthDatabase;
+use chrono::Utc;
+use foorum_auth::{AccessToken, PasswordHash, UserId, UserName};
+use sqlx::types::Uuid;
 use sqlx::{Pool, Postgres};
-use tonic::async_trait;
+use std::env;
 use std::error::Error;
 use std::time::Duration;
-use sqlx::types::Uuid;
-use chrono::Utc;
-use time::OffsetDateTime;
 use time::format_description::well_known::Rfc3339;
-use std::env;
-use foorum_auth::{AccessToken, UserHash, UserId, UserName};
-use crate::db::AuthDatabase;
+use time::OffsetDateTime;
+use tonic::async_trait;
 
 pub struct PostgresAuthDatabase {
     pool: Pool<Postgres>,
@@ -62,42 +62,49 @@ impl AuthDatabase for PostgresAuthDatabase {
     async fn create_account(
         &self,
         username: &UserName,
-        hash: &UserHash,
+        hash: &PasswordHash,
     ) -> Result<UserId, Box<dyn Error>> {
-        println!("Inserting user entry: {}/{}", username.0, hash.0);
+        println!("Inserting user entry: {}/{}", username, hash);
 
         let id = sqlx::query_scalar!(
             "INSERT INTO users (username, hash) VALUES ($1, $2) RETURNING id",
-            username.0,
-            hash.0
+            username.as_str(),
+            hash.as_str(),
         )
         .fetch_one(&self.pool)
         .await?;
 
-        Ok(UserId(id))
+        Ok(id.into())
     }
 
     async fn user_id(&self, username: &UserName) -> Result<UserId, Box<dyn Error>> {
-        let row = sqlx::query!("SELECT id FROM users WHERE username = $1", username.0)
-            .fetch_one(&self.pool)
-            .await?;
+        let row = sqlx::query!(
+            "SELECT id FROM users WHERE username = $1",
+            username.as_str()
+        )
+        .fetch_one(&self.pool)
+        .await?;
 
-        Ok(UserId(row.id))
+        Ok(row.id.into())
     }
 
     async fn delete_user(&self, user_id: &UserId) -> Result<(), Box<dyn Error>> {
-        sqlx::query!("DELETE FROM users WHERE id = $1", user_id.0)
+        sqlx::query!("DELETE FROM users WHERE id = $1", user_id.value())
             .execute(&self.pool)
             .await?;
 
         Ok(())
     }
 
-    async fn set_hash(&mut self, user_id: &UserId, hash: &UserHash) -> Result<(), Box<dyn Error>> {
+    async fn set_hash(
+        &mut self,
+        user_id: &UserId,
+        hash: &PasswordHash,
+    ) -> Result<(), Box<dyn Error>> {
         sqlx::query!(
             "UPDATE users SET hash = $1 WHERE id = $2",
-            hash.0,
-            user_id.0
+            hash.as_str(),
+            user_id.value()
         )
         .execute(&self.pool)
         .await?;
@@ -105,12 +112,12 @@ impl AuthDatabase for PostgresAuthDatabase {
         Ok(())
     }
 
-    async fn hash(&self, user_id: &UserId) -> Result<UserHash, Box<dyn Error>> {
-        let row = sqlx::query!("SELECT hash FROM users WHERE id = $1", user_id.0)
+    async fn hash(&self, user_id: &UserId) -> Result<PasswordHash, Box<dyn Error>> {
+        let row = sqlx::query!("SELECT hash FROM users WHERE id = $1", user_id.value())
             .fetch_one(&self.pool)
             .await?;
 
-        Ok(UserHash(row.hash))
+        Ok(row.hash.into())
     }
 
     async fn list_accounts(&self) -> Result<Vec<(UserId, UserName)>, Box<dyn Error>> {
@@ -120,7 +127,7 @@ impl AuthDatabase for PostgresAuthDatabase {
 
         let users = rows
             .into_iter()
-            .map(|row| (UserId(row.id), UserName(row.username)))
+            .map(|row| (UserId::from(row.id), UserName::from(row.username)))
             .collect();
 
         Ok(users)
@@ -135,7 +142,7 @@ impl AuthDatabase for PostgresAuthDatabase {
         let expires_at = OffsetDateTime::parse(&expires_at.to_rfc3339(), &Rfc3339)?;
         let session_id = sqlx::query_scalar!(
             "INSERT INTO sessions (user_id, expires_at) VALUES ($1, $2) RETURNING session_id",
-            user_id.0,
+            user_id.value(),
             expires_at,
         )
         .fetch_one(&self.pool)
@@ -150,12 +157,12 @@ impl AuthDatabase for PostgresAuthDatabase {
     ) -> Result<(UserId, OffsetDateTime), Box<dyn Error>> {
         let row = sqlx::query!(
             "SELECT user_id, expires_at FROM sessions WHERE session_id = $1",
-            access_token.0
+            access_token.value()
         )
         .fetch_one(&self.pool)
         .await?;
 
-        Ok((UserId(row.user_id), row.expires_at))
+        Ok((UserId::from(row.user_id), row.expires_at))
     }
 
     async fn purge_expired_sessions(&self, now: OffsetDateTime) -> Result<u64, Box<dyn Error>> {

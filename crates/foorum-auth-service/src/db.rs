@@ -1,9 +1,9 @@
-use tonic::async_trait;
+use foorum_auth::{AccessToken, PasswordHash, UserId, UserName};
+use sqlx::types::Uuid;
 use std::error::Error;
 use std::time::Duration;
-use sqlx::types::Uuid;
 use time::OffsetDateTime;
-use foorum_auth::{AccessToken, UserHash, UserId, UserName};
+use tonic::async_trait;
 
 pub mod postgres;
 
@@ -12,12 +12,16 @@ pub trait AuthDatabase: Send + Sync {
     async fn create_account(
         &self,
         username: &UserName,
-        hash: &UserHash,
+        hash: &PasswordHash,
     ) -> Result<UserId, Box<dyn Error>>;
     async fn user_id(&self, username: &UserName) -> Result<UserId, Box<dyn Error>>;
     async fn delete_user(&self, user_id: &UserId) -> Result<(), Box<dyn Error>>;
-    async fn set_hash(&mut self, user_id: &UserId, hash: &UserHash) -> Result<(), Box<dyn Error>>;
-    async fn hash(&self, user_id: &UserId) -> Result<UserHash, Box<dyn Error>>;
+    async fn set_hash(
+        &mut self,
+        user_id: &UserId,
+        hash: &PasswordHash,
+    ) -> Result<(), Box<dyn Error>>;
+    async fn hash(&self, user_id: &UserId) -> Result<PasswordHash, Box<dyn Error>>;
     async fn list_accounts(&self) -> Result<Vec<(UserId, UserName)>, Box<dyn Error>>;
     async fn create_session(&self, user_id: &UserId, ttl: Duration)
         -> Result<Uuid, Box<dyn Error>>;

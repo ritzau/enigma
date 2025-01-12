@@ -1,7 +1,6 @@
 use clap::{Parser, Subcommand};
-use foorum_auth::UserId;
-use foorum_auth_client_grpc::GrpcAuthClient;
 use foorum_auth::FoorumAuthClient;
+use foorum_auth_client_grpc::GrpcAuthClient;
 use uuid::Uuid;
 
 #[derive(Parser)]
@@ -37,11 +36,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             AuthCommands::Create { username, password } => {
                 let mut client = GrpcAuthClient::default().await?;
                 let response = client.create_account(&username, &password).await?;
-                println!("RESPONSE={:?}", response.0);
+                println!("RESPONSE={:?}", response);
             }
             AuthCommands::Delete { user_id } => {
                 let mut client = GrpcAuthClient::default().await?;
-                let response = client.delete_account(&UserId(user_id)).await?;
+                let response = client.delete_account(&user_id.into()).await?;
                 println!("RESPONSE={:?}", response);
             }
             AuthCommands::GetSession { access_token } => {
@@ -88,7 +87,11 @@ async fn create_test_users(client: &mut GrpcAuthClient) -> Result<(), Box<dyn st
 
     for (username, password) in test_users {
         let response = client.create_account(username, password).await?;
-        println!("Created user: {} with response: {:?}", username, response.0);
+        println!(
+            "Created user: {} with response: {:?}",
+            username,
+            response.value()
+        );
     }
 
     Ok(())
