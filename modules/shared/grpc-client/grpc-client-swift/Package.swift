@@ -4,24 +4,26 @@
 import PackageDescription
 
 let package = Package(
-    name: "grpc-client-swift",
+    name: "grpc-client",
     products: [
         // Products define the executables and libraries a package produces, making them visible to other packages.
         .library(
-            name: "grpc-client-swift",
-            targets: ["grpc-client-swift"]),
+            name: "FoorumGrpcClient",
+            targets: ["FoorumGrpcClient"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/grpc/grpc-swift.git", from: "1.0.0"),
+        .package(url: "https://github.com/grpc/grpc-swift", .upToNextMajor(from: "1.24.2")),
     ],
     targets: [
-        // Targets are the basic building blocks of a package, defining a module or a test suite.
-        // Targets can depend on other targets in this package and products from dependencies.
         .target(
-            name: "grpc-client-swift"),
+            name: "FoorumGrpcClient",
+            dependencies: [
+                .product(name: "GRPC", package: "grpc-swift"), // Add the GRPC dependency here
+            ]
+        ),
         .testTarget(
             name: "grpcs-client-tests",
-            dependencies: ["grpc-client-swift"]
+            dependencies: ["FoorumGrpcClient"]
         ),
     ]
 )

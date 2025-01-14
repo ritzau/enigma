@@ -7,10 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		F8931C8B2D3689720068E014 /* grpc-client-swift in Frameworks */ = {isa = PBXBuildFile; productRef = F8931C8A2D3689720068E014 /* grpc-client-swift */; };
-		F8BFFC5B2D347591004F9A8B /* CGRPCZlib in Frameworks */ = {isa = PBXBuildFile; productRef = F8BFFC5A2D347591004F9A8B /* CGRPCZlib */; };
-		F8BFFC5D2D347591004F9A8B /* GRPC in Frameworks */ = {isa = PBXBuildFile; productRef = F8BFFC5C2D347591004F9A8B /* GRPC */; };
-		F8BFFC5F2D347591004F9A8B /* GRPCReflectionService in Frameworks */ = {isa = PBXBuildFile; productRef = F8BFFC5E2D347591004F9A8B /* GRPCReflectionService */; };
+		F8931CAC2D36D63C0068E014 /* FoorumGrpcClient in Frameworks */ = {isa = PBXBuildFile; productRef = F8931CAB2D36D63C0068E014 /* FoorumGrpcClient */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -31,6 +28,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		F8931C912D36D12E0068E014 /* grpc-client-swift */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = "grpc-client-swift"; path = "../../../shared/grpc-client/grpc-client-swift"; sourceTree = SOURCE_ROOT; };
 		F8A794D72D33DEB500B20AB2 /* Foorum.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Foorum.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F8A794E72D33DEB900B20AB2 /* FoorumTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FoorumTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F8A794F12D33DEB900B20AB2 /* FoorumUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FoorumUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -72,10 +70,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F8BFFC5F2D347591004F9A8B /* GRPCReflectionService in Frameworks */,
-				F8BFFC5D2D347591004F9A8B /* GRPC in Frameworks */,
-				F8BFFC5B2D347591004F9A8B /* CGRPCZlib in Frameworks */,
-				F8931C8B2D3689720068E014 /* grpc-client-swift in Frameworks */,
+				F8931CAC2D36D63C0068E014 /* FoorumGrpcClient in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -96,6 +91,13 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		F8931CA82D36D5500068E014 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		F8A794CE2D33DEB500B20AB2 = {
 			isa = PBXGroup;
 			children = (
@@ -103,6 +105,8 @@
 				F8A794EA2D33DEB900B20AB2 /* FoorumTests */,
 				F8A794F42D33DEB900B20AB2 /* FoorumUITests */,
 				F8A794D82D33DEB500B20AB2 /* Products */,
+				F8931C912D36D12E0068E014 /* grpc-client-swift */,
+				F8931CA82D36D5500068E014 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -136,10 +140,7 @@
 			);
 			name = Foorum;
 			packageProductDependencies = (
-				F8BFFC5A2D347591004F9A8B /* CGRPCZlib */,
-				F8BFFC5C2D347591004F9A8B /* GRPC */,
-				F8BFFC5E2D347591004F9A8B /* GRPCReflectionService */,
-				F8931C8A2D3689720068E014 /* grpc-client-swift */,
+				F8931CAB2D36D63C0068E014 /* FoorumGrpcClient */,
 			);
 			productName = Foorum;
 			productReference = F8A794D72D33DEB500B20AB2 /* Foorum.app */;
@@ -224,7 +225,6 @@
 			mainGroup = F8A794CE2D33DEB500B20AB2;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				F8BFFC592D347591004F9A8B /* XCRemoteSwiftPackageReference "grpc-swift" */,
 				F8931C892D3689720068E014 /* XCLocalSwiftPackageReference "../../../shared/grpc-client/grpc-client-swift" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -596,36 +596,11 @@
 		};
 /* End XCLocalSwiftPackageReference section */
 
-/* Begin XCRemoteSwiftPackageReference section */
-		F8BFFC592D347591004F9A8B /* XCRemoteSwiftPackageReference "grpc-swift" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/grpc/grpc-swift";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.24.2;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
 /* Begin XCSwiftPackageProductDependency section */
-		F8931C8A2D3689720068E014 /* grpc-client-swift */ = {
+		F8931CAB2D36D63C0068E014 /* FoorumGrpcClient */ = {
 			isa = XCSwiftPackageProductDependency;
-			productName = "grpc-client-swift";
-		};
-		F8BFFC5A2D347591004F9A8B /* CGRPCZlib */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = F8BFFC592D347591004F9A8B /* XCRemoteSwiftPackageReference "grpc-swift" */;
-			productName = CGRPCZlib;
-		};
-		F8BFFC5C2D347591004F9A8B /* GRPC */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = F8BFFC592D347591004F9A8B /* XCRemoteSwiftPackageReference "grpc-swift" */;
-			productName = GRPC;
-		};
-		F8BFFC5E2D347591004F9A8B /* GRPCReflectionService */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = F8BFFC592D347591004F9A8B /* XCRemoteSwiftPackageReference "grpc-swift" */;
-			productName = GRPCReflectionService;
+			package = F8931C892D3689720068E014 /* XCLocalSwiftPackageReference "../../../shared/grpc-client/grpc-client-swift" */;
+			productName = FoorumGrpcClient;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
