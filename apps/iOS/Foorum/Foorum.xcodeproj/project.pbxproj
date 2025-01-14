@@ -6,6 +6,12 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		F8BFFC5B2D347591004F9A8B /* CGRPCZlib in Frameworks */ = {isa = PBXBuildFile; productRef = F8BFFC5A2D347591004F9A8B /* CGRPCZlib */; };
+		F8BFFC5D2D347591004F9A8B /* GRPC in Frameworks */ = {isa = PBXBuildFile; productRef = F8BFFC5C2D347591004F9A8B /* GRPC */; };
+		F8BFFC5F2D347591004F9A8B /* GRPCReflectionService in Frameworks */ = {isa = PBXBuildFile; productRef = F8BFFC5E2D347591004F9A8B /* GRPCReflectionService */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		F8A794E82D33DEB900B20AB2 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -29,9 +35,22 @@
 		F8A794F12D33DEB900B20AB2 /* FoorumUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FoorumUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		F884A7F32D35606F00FBBB1E /* Exceptions for "Foorum" folder in "Foorum" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = F8A794D62D33DEB500B20AB2 /* Foorum */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		F8A794D92D33DEB500B20AB2 /* Foorum */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				F884A7F32D35606F00FBBB1E /* Exceptions for "Foorum" folder in "Foorum" target */,
+			);
 			path = Foorum;
 			sourceTree = "<group>";
 		};
@@ -52,6 +71,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F8BFFC5F2D347591004F9A8B /* GRPCReflectionService in Frameworks */,
+				F8BFFC5D2D347591004F9A8B /* GRPC in Frameworks */,
+				F8BFFC5B2D347591004F9A8B /* CGRPCZlib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -112,6 +134,9 @@
 			);
 			name = Foorum;
 			packageProductDependencies = (
+				F8BFFC5A2D347591004F9A8B /* CGRPCZlib */,
+				F8BFFC5C2D347591004F9A8B /* GRPC */,
+				F8BFFC5E2D347591004F9A8B /* GRPCReflectionService */,
 			);
 			productName = Foorum;
 			productReference = F8A794D72D33DEB500B20AB2 /* Foorum.app */;
@@ -195,6 +220,9 @@
 			);
 			mainGroup = F8A794CE2D33DEB500B20AB2;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				F8BFFC592D347591004F9A8B /* XCRemoteSwiftPackageReference "grpc-swift" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F8A794D82D33DEB500B20AB2 /* Products */;
 			projectDirPath = "";
@@ -321,7 +349,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -378,7 +406,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
@@ -396,8 +424,10 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"Foorum/Preview Content\"";
+				DEVELOPMENT_TEAM = DLB59H2B97;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Foorum/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -424,8 +454,10 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"Foorum/Preview Content\"";
+				DEVELOPMENT_TEAM = DLB59H2B97;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Foorum/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -552,6 +584,35 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		F8BFFC592D347591004F9A8B /* XCRemoteSwiftPackageReference "grpc-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/grpc/grpc-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.24.2;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		F8BFFC5A2D347591004F9A8B /* CGRPCZlib */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F8BFFC592D347591004F9A8B /* XCRemoteSwiftPackageReference "grpc-swift" */;
+			productName = CGRPCZlib;
+		};
+		F8BFFC5C2D347591004F9A8B /* GRPC */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F8BFFC592D347591004F9A8B /* XCRemoteSwiftPackageReference "grpc-swift" */;
+			productName = GRPC;
+		};
+		F8BFFC5E2D347591004F9A8B /* GRPCReflectionService */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F8BFFC592D347591004F9A8B /* XCRemoteSwiftPackageReference "grpc-swift" */;
+			productName = GRPCReflectionService;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = F8A794CF2D33DEB500B20AB2 /* Project object */;
 }

@@ -6,7 +6,7 @@ use tonic::transport::Server;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let addr = "[::1]:50051".parse().unwrap();
+    let addr = "[::]:50051".parse().unwrap();
     println!("Foorum Server listening on {}", addr);
 
     let db = PostgresAuthDatabase::new().await?;
