@@ -8,6 +8,7 @@
 import Foundation
 import GRPC
 import NIO
+import grpc_client_swift
 
 class AuthenticationService {
     private let client: Auth_AuthNIOClient
@@ -16,6 +17,9 @@ class AuthenticationService {
     init() {
         // Create an EventLoopGroup
         self.eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+
+        let fortytwo = foobar();
+        print(fortytwo);
 
         // Set up the gRPC client connection
         let channel = try! ClientConnection

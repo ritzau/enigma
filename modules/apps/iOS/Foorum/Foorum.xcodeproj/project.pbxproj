@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		F8931C8B2D3689720068E014 /* grpc-client-swift in Frameworks */ = {isa = PBXBuildFile; productRef = F8931C8A2D3689720068E014 /* grpc-client-swift */; };
 		F8BFFC5B2D347591004F9A8B /* CGRPCZlib in Frameworks */ = {isa = PBXBuildFile; productRef = F8BFFC5A2D347591004F9A8B /* CGRPCZlib */; };
 		F8BFFC5D2D347591004F9A8B /* GRPC in Frameworks */ = {isa = PBXBuildFile; productRef = F8BFFC5C2D347591004F9A8B /* GRPC */; };
 		F8BFFC5F2D347591004F9A8B /* GRPCReflectionService in Frameworks */ = {isa = PBXBuildFile; productRef = F8BFFC5E2D347591004F9A8B /* GRPCReflectionService */; };
@@ -74,6 +75,7 @@
 				F8BFFC5F2D347591004F9A8B /* GRPCReflectionService in Frameworks */,
 				F8BFFC5D2D347591004F9A8B /* GRPC in Frameworks */,
 				F8BFFC5B2D347591004F9A8B /* CGRPCZlib in Frameworks */,
+				F8931C8B2D3689720068E014 /* grpc-client-swift in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -137,6 +139,7 @@
 				F8BFFC5A2D347591004F9A8B /* CGRPCZlib */,
 				F8BFFC5C2D347591004F9A8B /* GRPC */,
 				F8BFFC5E2D347591004F9A8B /* GRPCReflectionService */,
+				F8931C8A2D3689720068E014 /* grpc-client-swift */,
 			);
 			productName = Foorum;
 			productReference = F8A794D72D33DEB500B20AB2 /* Foorum.app */;
@@ -222,6 +225,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				F8BFFC592D347591004F9A8B /* XCRemoteSwiftPackageReference "grpc-swift" */,
+				F8931C892D3689720068E014 /* XCLocalSwiftPackageReference "../../../shared/grpc-client/grpc-client-swift" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F8A794D82D33DEB500B20AB2 /* Products */;
@@ -585,6 +589,13 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCLocalSwiftPackageReference section */
+		F8931C892D3689720068E014 /* XCLocalSwiftPackageReference "../../../shared/grpc-client/grpc-client-swift" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = "../../../shared/grpc-client/grpc-client-swift";
+		};
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCRemoteSwiftPackageReference section */
 		F8BFFC592D347591004F9A8B /* XCRemoteSwiftPackageReference "grpc-swift" */ = {
 			isa = XCRemoteSwiftPackageReference;
@@ -597,6 +608,10 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		F8931C8A2D3689720068E014 /* grpc-client-swift */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = "grpc-client-swift";
+		};
 		F8BFFC5A2D347591004F9A8B /* CGRPCZlib */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = F8BFFC592D347591004F9A8B /* XCRemoteSwiftPackageReference "grpc-swift" */;
