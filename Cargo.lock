@@ -561,7 +561,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "foorum-auth-client-grpc"
+name = "foorum-auth-client"
 version = "0.1.0"
 dependencies = [
  "foorum-auth",
@@ -586,19 +586,9 @@ dependencies = [
  "chrono",
  "dotenvy",
  "foorum-auth",
+ "foorum-auth-grpc",
  "sqlx",
  "time",
- "tonic",
-]
-
-[[package]]
-name = "foorum-auth-service-grpc"
-version = "0.1.0"
-dependencies = [
- "foorum-auth",
- "foorum-auth-grpc",
- "foorum-auth-service",
- "sqlx",
  "tonic",
 ]
 
@@ -608,7 +598,7 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "foorum-auth",
- "foorum-auth-client-grpc",
+ "foorum-auth-client",
  "tokio",
  "uuid",
 ]
@@ -620,7 +610,6 @@ dependencies = [
  "foorum-auth",
  "foorum-auth-grpc",
  "foorum-auth-service",
- "foorum-auth-service-grpc",
  "tokio",
  "tonic",
 ]

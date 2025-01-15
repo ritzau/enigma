@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "4.5.26", features = ["derive"] }
-foorum-auth = { path = "../foorum-auth" }
-foorum-auth-client-grpc = { path = "../foorum-auth-client-grpc" }
+foorum-auth = { path = "../../../../shared/auth/rust/foorum-auth" }
+foorum-auth-client = { path = "../../../../shared/auth/rust/foorum-auth-client", features = ["grpc"] }
 tokio = { version = "1.43.0", features = ["rt-multi-thread"] }
 uuid = { version = "1.11.1", features = ["v4"] }

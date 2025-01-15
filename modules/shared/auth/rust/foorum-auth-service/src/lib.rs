@@ -6,6 +6,9 @@ use tonic::async_trait;
 
 pub mod db;
 
+#[cfg(feature = "grpc")]
+pub mod grpc;
+
 #[async_trait]
 pub trait FoorumAuthService: Send + Sync {
     async fn create_account(&self, username: &str, password: &str) -> Result<i64, Box<dyn Error>>;

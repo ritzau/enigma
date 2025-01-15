@@ -1,9 +1,11 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/*"
+    "modules/backend/foorum/rust/*",
+    "modules/shared/auth/rust/*",
+    "modules/tools/foorum-client/rust/*",
 ]
 
-#default-members = [
-#    "crates/foorum-auth",
-#]
+default-members = [
+    "modules/tools/foorum-client/rust/foorum-client",
+]

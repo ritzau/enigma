@@ -1,10 +1,10 @@
+use crate::FoorumAuthService;
 use foorum_auth_grpc::{
     auth_server, CreateAccountReply, CreateAccountRequest, DeleteAccountReply,
     DeleteAccountRequest, GetSessionReply, GetSessionRequest, ListAccountsReply,
     ListAccountsRequest, LoginReply, LoginRequest, PurgeExpiredSessionsReply,
     PurgeExpiredSessionsRequest, User,
 };
-use foorum_auth_service::FoorumAuthService;
 use sqlx::types::Uuid;
 use tonic::{Request, Response, Status};
 

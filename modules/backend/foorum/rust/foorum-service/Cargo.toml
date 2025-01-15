@@ -1,0 +1,11 @@
+[package]
+name = "foorum-service"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tonic = "0.12.3"
+tokio = { version = "1.43.0", features = ["rt-multi-thread"] }
+foorum-auth = { path = "../../../../shared/auth/rust/foorum-auth" }
+foorum-auth-grpc = { path = "../../../../shared/auth/rust/foorum-auth-grpc" }
+foorum-auth-service = { path = "../../../../shared/auth/rust/foorum-auth-service", features = ["grpc"] }
