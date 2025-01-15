@@ -1,5 +1,5 @@
 use crate::FoorumAuthService;
-use foorum_auth_grpc::{
+use enigma_auth_grpc::{
     auth_server, CreateAccountReply, CreateAccountRequest, DeleteAccountReply,
     DeleteAccountRequest, GetSessionReply, GetSessionRequest, ListAccountsReply,
     ListAccountsRequest, LoginReply, LoginRequest, PurgeExpiredSessionsReply,

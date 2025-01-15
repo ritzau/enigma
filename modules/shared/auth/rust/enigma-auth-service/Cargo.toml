@@ -1,17 +1,17 @@
 [package]
-name = "foorum-auth-service"
+name = "enigma-auth-service"
 version = "0.1.0"
 edition = "2021"
 
 [features]
 default = ["grpc"]
-grpc = ["dep:foorum-auth-grpc"]
+grpc = ["dep:enigma-auth-grpc"]
 
 [dependencies]
 chrono = "0.4.39"
 dotenvy = "0.15.7"
-foorum-auth = { path = "../foorum-auth" }
-foorum-auth-grpc = { path = "../foorum-auth-grpc", optional = true }
+enigma-auth = { path = "../enigma-auth" }
+enigma-auth-grpc = { path = "../enigma-auth-grpc", optional = true }
 sqlx = { version = "0.8.3", features = ["postgres", "runtime-tokio-native-tls", "time", "uuid"] }
 time = "0.3.37"
 tonic = "0.12.3"

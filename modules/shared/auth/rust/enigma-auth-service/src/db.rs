@@ -1,4 +1,4 @@
-use foorum_auth::{AccessToken, PasswordHash, UserId, UserName};
+use enigma_auth::{AccessToken, PasswordHash, UserId, UserName};
 use sqlx::types::Uuid;
 use std::error::Error;
 use std::time::Duration;

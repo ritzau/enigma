@@ -1,5 +1,5 @@
 use db::AuthDatabase;
-use foorum_auth::{AccessToken, PasswordHash, UserId};
+use enigma_auth::{AccessToken, PasswordHash, UserId};
 use sqlx::types::Uuid;
 use std::error::Error;
 use tonic::async_trait;

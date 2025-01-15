@@ -1,7 +1,7 @@
-use foorum_auth_grpc::auth_server::AuthServer;
-use foorum_auth_service::db::postgres::PostgresAuthDatabase;
-use foorum_auth_service::grpc::GrpcAuthService;
-use foorum_auth_service::DefaultAuthService;
+use enigma_auth_grpc::auth_server::AuthServer;
+use enigma_auth_service::db::postgres::PostgresAuthDatabase;
+use enigma_auth_service::grpc::GrpcAuthService;
+use enigma_auth_service::DefaultAuthService;
 use tonic::transport::Server;
 
 #[tokio::main]

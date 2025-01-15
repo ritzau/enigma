@@ -1,6 +1,6 @@
-use foorum_auth::{FoorumAuthClient, UserId};
-use foorum_auth_grpc::auth_client::AuthClient;
-use foorum_auth_grpc::{
+use enigma_auth::{FoorumAuthClient, UserId};
+use enigma_auth_grpc::auth_client::AuthClient;
+use enigma_auth_grpc::{
     CreateAccountReply, CreateAccountRequest, DeleteAccountRequest, GetSessionReply,
     GetSessionRequest, ListAccountsReply, ListAccountsRequest, LoginReply, LoginRequest,
     PurgeExpiredSessionsReply, PurgeExpiredSessionsRequest,

@@ -1,11 +1,11 @@
 [workspace]
 resolver = "2"
 members = [
-    "modules/backend/foorum/rust/*",
+    "modules/backend/enigma/rust/*",
     "modules/shared/auth/rust/*",
-    "modules/tools/foorum-client/rust/*",
+    "modules/tools/enigma-client/rust/*",
 ]
 
 default-members = [
-    "modules/tools/foorum-client/rust/foorum-client",
+    "modules/tools/enigma-client/rust/enigma-client",
 ]

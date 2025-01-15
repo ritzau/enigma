@@ -1,6 +1,6 @@
 use clap::{Parser, Subcommand};
-use foorum_auth::FoorumAuthClient;
-use foorum_auth_client::grpc::GrpcAuthClient;
+use enigma_auth::FoorumAuthClient;
+use enigma_auth_client::grpc::GrpcAuthClient;
 use uuid::Uuid;
 
 #[derive(Parser)]

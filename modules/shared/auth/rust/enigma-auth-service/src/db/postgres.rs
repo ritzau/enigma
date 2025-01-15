@@ -1,6 +1,6 @@
 use crate::db::AuthDatabase;
 use chrono::Utc;
-use foorum_auth::{AccessToken, PasswordHash, UserId, UserName};
+use enigma_auth::{AccessToken, PasswordHash, UserId, UserName};
 use sqlx::types::Uuid;
 use sqlx::{Pool, Postgres};
 use std::env;
