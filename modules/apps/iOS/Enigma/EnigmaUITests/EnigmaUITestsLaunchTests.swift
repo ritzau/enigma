@@ -1,10 +1,3 @@
-//
-//  FoorumUITestsLaunchTests.swift
-//  FoorumUITests
-//
-//  Created by Tobias Ritzau on 2025-01-12.
-//
-
 import XCTest
 
 final class EnigmaUITestsLaunchTests: XCTestCase {

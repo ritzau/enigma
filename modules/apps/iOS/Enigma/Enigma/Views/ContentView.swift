@@ -1,10 +1,3 @@
-//
-//  ContentView.swift
-//  Foorum
-//
-//  Created by Tobias Ritzau on 2025-01-12.
-//
-
 import SwiftUI
 
 struct ContentView: View {
@@ -13,7 +6,7 @@ struct ContentView: View {
             Image(systemName: "globe")
                 .imageScale(.large)
                 .foregroundStyle(.tint)
-            
+
             Text("Hello, world!")
 
             Button(action: logout) {
