@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		F8931CAC2D36D63C0068E014 /* FoorumGrpcClient in Frameworks */ = {isa = PBXBuildFile; productRef = F8931CAB2D36D63C0068E014 /* FoorumGrpcClient */; };
+		F81122992D379C93007B7761 /* FoorumAuthGrpcClient in Frameworks */ = {isa = PBXBuildFile; productRef = F81122982D379C93007B7761 /* FoorumAuthGrpcClient */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -28,7 +28,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		F8931C912D36D12E0068E014 /* grpc-client-swift */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = "grpc-client-swift"; path = "../../../shared/grpc-client/grpc-client-swift"; sourceTree = SOURCE_ROOT; };
+		F811229A2D379CB4007B7761 /* foorum-auth-client-grpc */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = "foorum-auth-client-grpc"; path = "../../../shared/auth/swift/foorum-auth-client-grpc"; sourceTree = SOURCE_ROOT; };
 		F8A794D72D33DEB500B20AB2 /* Foorum.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Foorum.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F8A794E72D33DEB900B20AB2 /* FoorumTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FoorumTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F8A794F12D33DEB900B20AB2 /* FoorumUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FoorumUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -70,7 +70,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F8931CAC2D36D63C0068E014 /* FoorumGrpcClient in Frameworks */,
+				F81122992D379C93007B7761 /* FoorumAuthGrpcClient in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -101,11 +101,11 @@
 		F8A794CE2D33DEB500B20AB2 = {
 			isa = PBXGroup;
 			children = (
+				F811229A2D379CB4007B7761 /* foorum-auth-client-grpc */,
 				F8A794D92D33DEB500B20AB2 /* Foorum */,
 				F8A794EA2D33DEB900B20AB2 /* FoorumTests */,
 				F8A794F42D33DEB900B20AB2 /* FoorumUITests */,
 				F8A794D82D33DEB500B20AB2 /* Products */,
-				F8931C912D36D12E0068E014 /* grpc-client-swift */,
 				F8931CA82D36D5500068E014 /* Frameworks */,
 			);
 			sourceTree = "<group>";
@@ -140,7 +140,7 @@
 			);
 			name = Foorum;
 			packageProductDependencies = (
-				F8931CAB2D36D63C0068E014 /* FoorumGrpcClient */,
+				F81122982D379C93007B7761 /* FoorumAuthGrpcClient */,
 			);
 			productName = Foorum;
 			productReference = F8A794D72D33DEB500B20AB2 /* Foorum.app */;
@@ -225,7 +225,7 @@
 			mainGroup = F8A794CE2D33DEB500B20AB2;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				F8931C892D3689720068E014 /* XCLocalSwiftPackageReference "../../../shared/grpc-client/grpc-client-swift" */,
+				F81122972D379C93007B7761 /* XCLocalSwiftPackageReference "../../../shared/auth/swift/foorum-auth-client-grpc" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F8A794D82D33DEB500B20AB2 /* Products */;
@@ -590,17 +590,16 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		F8931C892D3689720068E014 /* XCLocalSwiftPackageReference "../../../shared/grpc-client/grpc-client-swift" */ = {
+		F81122972D379C93007B7761 /* XCLocalSwiftPackageReference "../../../shared/auth/swift/foorum-auth-client-grpc" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = "../../../shared/grpc-client/grpc-client-swift";
+			relativePath = "../../../shared/auth/swift/foorum-auth-client-grpc";
 		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		F8931CAB2D36D63C0068E014 /* FoorumGrpcClient */ = {
+		F81122982D379C93007B7761 /* FoorumAuthGrpcClient */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = F8931C892D3689720068E014 /* XCLocalSwiftPackageReference "../../../shared/grpc-client/grpc-client-swift" */;
-			productName = FoorumGrpcClient;
+			productName = FoorumAuthGrpcClient;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

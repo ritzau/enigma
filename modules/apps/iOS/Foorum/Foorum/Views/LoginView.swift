@@ -1,5 +1,5 @@
 import SwiftUI
-import FoorumGrpcClient
+import FoorumAuthGrpcClient
 
 struct LoginView: View {
     @State private var username: String = ""
@@ -81,9 +81,9 @@ struct LoginView: View {
                             }
                         }
                         .padding(.horizontal, 40)
-                        .padding(.bottom, 20)
+//                        .padding(.bottom, 20)
                     }
-                    .background(Color(.systemBackground))
+//                    .background(Color(.systemBackground))
                     .onChange(of: focusedField) {
                         // Scroll to the active field when focus changes
                         if let field = focusedField {
@@ -94,7 +94,9 @@ struct LoginView: View {
                     }
                 }
                 .onTapGesture {
-                    dismissKeyboard() // Dismiss keyboard on tap
+                    withAnimation {
+                        dismissKeyboard() // Dismiss keyboard on tap
+                    }
                 }
             }
         }

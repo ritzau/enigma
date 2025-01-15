@@ -1,5 +1,5 @@
 import SwiftUI
-import FoorumGrpcClient
+import FoorumAuthGrpcClient
 
 struct CreateAccountView: View {
     @Environment(\.presentationMode) var presentationMode
@@ -78,6 +78,11 @@ struct CreateAccountView: View {
                                     .foregroundColor(.white)
                             }
                         }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(isLoading ? Color.gray : Color.accentColor)
+                        .cornerRadius(8)
+                        .disabled(isLoading) // Disable only the button, not the NavigationLink
 
                         // Back to Login Button
 //                        Button(action: {
