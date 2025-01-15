@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use enigma_auth::FoorumAuthClient;
+use enigma_auth::EnigmaAuthClient;
 use enigma_auth_client::grpc::GrpcAuthClient;
 use uuid::Uuid;
 

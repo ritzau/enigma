@@ -6,10 +6,6 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXBuildFile section */
-		F81122992D379C93007B7761 /* FoorumAuthGrpcClient in Frameworks */ = {isa = PBXBuildFile; productRef = F81122982D379C93007B7761 /* FoorumAuthGrpcClient */; };
-/* End PBXBuildFile section */
-
 /* Begin PBXContainerItemProxy section */
 		F8A794E82D33DEB900B20AB2 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -28,39 +24,38 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		F811229A2D379CB4007B7761 /* foorum-auth-client-grpc */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = "foorum-auth-client-grpc"; path = "../../../shared/auth/swift/foorum-auth-client-grpc"; sourceTree = SOURCE_ROOT; };
-		F8A794D72D33DEB500B20AB2 /* Foorum.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Foorum.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		F8A794E72D33DEB900B20AB2 /* FoorumTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FoorumTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		F8A794F12D33DEB900B20AB2 /* FoorumUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FoorumUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F8A794D72D33DEB500B20AB2 /* Enigma.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Enigma.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F8A794E72D33DEB900B20AB2 /* EnigmaTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EnigmaTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F8A794F12D33DEB900B20AB2 /* EnigmaUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EnigmaUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		F884A7F32D35606F00FBBB1E /* Exceptions for "Foorum" folder in "Foorum" target */ = {
+		F884A7F32D35606F00FBBB1E /* Exceptions for "Enigma" folder in "Enigma" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = F8A794D62D33DEB500B20AB2 /* Foorum */;
+			target = F8A794D62D33DEB500B20AB2 /* Enigma */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		F8A794D92D33DEB500B20AB2 /* Foorum */ = {
+		F8A794D92D33DEB500B20AB2 /* Enigma */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				F884A7F32D35606F00FBBB1E /* Exceptions for "Foorum" folder in "Foorum" target */,
+				F884A7F32D35606F00FBBB1E /* Exceptions for "Enigma" folder in "Enigma" target */,
 			);
-			path = Foorum;
+			path = Enigma;
 			sourceTree = "<group>";
 		};
-		F8A794EA2D33DEB900B20AB2 /* FoorumTests */ = {
+		F8A794EA2D33DEB900B20AB2 /* EnigmaTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = FoorumTests;
+			path = EnigmaTests;
 			sourceTree = "<group>";
 		};
-		F8A794F42D33DEB900B20AB2 /* FoorumUITests */ = {
+		F8A794F42D33DEB900B20AB2 /* EnigmaUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = FoorumUITests;
+			path = EnigmaUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -70,7 +65,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F81122992D379C93007B7761 /* FoorumAuthGrpcClient in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -101,10 +95,9 @@
 		F8A794CE2D33DEB500B20AB2 = {
 			isa = PBXGroup;
 			children = (
-				F811229A2D379CB4007B7761 /* foorum-auth-client-grpc */,
-				F8A794D92D33DEB500B20AB2 /* Foorum */,
-				F8A794EA2D33DEB900B20AB2 /* FoorumTests */,
-				F8A794F42D33DEB900B20AB2 /* FoorumUITests */,
+				F8A794D92D33DEB500B20AB2 /* Enigma */,
+				F8A794EA2D33DEB900B20AB2 /* EnigmaTests */,
+				F8A794F42D33DEB900B20AB2 /* EnigmaUITests */,
 				F8A794D82D33DEB500B20AB2 /* Products */,
 				F8931CA82D36D5500068E014 /* Frameworks */,
 			);
@@ -113,9 +106,9 @@
 		F8A794D82D33DEB500B20AB2 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				F8A794D72D33DEB500B20AB2 /* Foorum.app */,
-				F8A794E72D33DEB900B20AB2 /* FoorumTests.xctest */,
-				F8A794F12D33DEB900B20AB2 /* FoorumUITests.xctest */,
+				F8A794D72D33DEB500B20AB2 /* Enigma.app */,
+				F8A794E72D33DEB900B20AB2 /* EnigmaTests.xctest */,
+				F8A794F12D33DEB900B20AB2 /* EnigmaUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -123,9 +116,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		F8A794D62D33DEB500B20AB2 /* Foorum */ = {
+		F8A794D62D33DEB500B20AB2 /* Enigma */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = F8A794FB2D33DEB900B20AB2 /* Build configuration list for PBXNativeTarget "Foorum" */;
+			buildConfigurationList = F8A794FB2D33DEB900B20AB2 /* Build configuration list for PBXNativeTarget "Enigma" */;
 			buildPhases = (
 				F8A794D32D33DEB500B20AB2 /* Sources */,
 				F8A794D42D33DEB500B20AB2 /* Frameworks */,
@@ -136,19 +129,18 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				F8A794D92D33DEB500B20AB2 /* Foorum */,
+				F8A794D92D33DEB500B20AB2 /* Enigma */,
 			);
-			name = Foorum;
+			name = Enigma;
 			packageProductDependencies = (
-				F81122982D379C93007B7761 /* FoorumAuthGrpcClient */,
 			);
 			productName = Foorum;
-			productReference = F8A794D72D33DEB500B20AB2 /* Foorum.app */;
+			productReference = F8A794D72D33DEB500B20AB2 /* Enigma.app */;
 			productType = "com.apple.product-type.application";
 		};
-		F8A794E62D33DEB900B20AB2 /* FoorumTests */ = {
+		F8A794E62D33DEB900B20AB2 /* EnigmaTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = F8A794FE2D33DEB900B20AB2 /* Build configuration list for PBXNativeTarget "FoorumTests" */;
+			buildConfigurationList = F8A794FE2D33DEB900B20AB2 /* Build configuration list for PBXNativeTarget "EnigmaTests" */;
 			buildPhases = (
 				F8A794E32D33DEB900B20AB2 /* Sources */,
 				F8A794E42D33DEB900B20AB2 /* Frameworks */,
@@ -160,18 +152,18 @@
 				F8A794E92D33DEB900B20AB2 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				F8A794EA2D33DEB900B20AB2 /* FoorumTests */,
+				F8A794EA2D33DEB900B20AB2 /* EnigmaTests */,
 			);
-			name = FoorumTests;
+			name = EnigmaTests;
 			packageProductDependencies = (
 			);
 			productName = FoorumTests;
-			productReference = F8A794E72D33DEB900B20AB2 /* FoorumTests.xctest */;
+			productReference = F8A794E72D33DEB900B20AB2 /* EnigmaTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		F8A794F02D33DEB900B20AB2 /* FoorumUITests */ = {
+		F8A794F02D33DEB900B20AB2 /* EnigmaUITests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = F8A795012D33DEB900B20AB2 /* Build configuration list for PBXNativeTarget "FoorumUITests" */;
+			buildConfigurationList = F8A795012D33DEB900B20AB2 /* Build configuration list for PBXNativeTarget "EnigmaUITests" */;
 			buildPhases = (
 				F8A794ED2D33DEB900B20AB2 /* Sources */,
 				F8A794EE2D33DEB900B20AB2 /* Frameworks */,
@@ -183,13 +175,13 @@
 				F8A794F32D33DEB900B20AB2 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				F8A794F42D33DEB900B20AB2 /* FoorumUITests */,
+				F8A794F42D33DEB900B20AB2 /* EnigmaUITests */,
 			);
-			name = FoorumUITests;
+			name = EnigmaUITests;
 			packageProductDependencies = (
 			);
 			productName = FoorumUITests;
-			productReference = F8A794F12D33DEB900B20AB2 /* FoorumUITests.xctest */;
+			productReference = F8A794F12D33DEB900B20AB2 /* EnigmaUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
@@ -215,7 +207,7 @@
 					};
 				};
 			};
-			buildConfigurationList = F8A794D22D33DEB500B20AB2 /* Build configuration list for PBXProject "Foorum" */;
+			buildConfigurationList = F8A794D22D33DEB500B20AB2 /* Build configuration list for PBXProject "Enigma" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -225,16 +217,16 @@
 			mainGroup = F8A794CE2D33DEB500B20AB2;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				F81122972D379C93007B7761 /* XCLocalSwiftPackageReference "../../../shared/auth/swift/foorum-auth-client-grpc" */,
+				F8DB13C62D3809C600A39060 /* XCLocalSwiftPackageReference "../../../shared/auth/swift/enigma-auth-client-grpc" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F8A794D82D33DEB500B20AB2 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				F8A794D62D33DEB500B20AB2 /* Foorum */,
-				F8A794E62D33DEB900B20AB2 /* FoorumTests */,
-				F8A794F02D33DEB900B20AB2 /* FoorumUITests */,
+				F8A794D62D33DEB500B20AB2 /* Enigma */,
+				F8A794E62D33DEB900B20AB2 /* EnigmaTests */,
+				F8A794F02D33DEB900B20AB2 /* EnigmaUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -290,12 +282,12 @@
 /* Begin PBXTargetDependency section */
 		F8A794E92D33DEB900B20AB2 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = F8A794D62D33DEB500B20AB2 /* Foorum */;
+			target = F8A794D62D33DEB500B20AB2 /* Enigma */;
 			targetProxy = F8A794E82D33DEB900B20AB2 /* PBXContainerItemProxy */;
 		};
 		F8A794F32D33DEB900B20AB2 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = F8A794D62D33DEB500B20AB2 /* Foorum */;
+			target = F8A794D62D33DEB500B20AB2 /* Enigma */;
 			targetProxy = F8A794F22D33DEB900B20AB2 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -551,7 +543,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		F8A794D22D33DEB500B20AB2 /* Build configuration list for PBXProject "Foorum" */ = {
+		F8A794D22D33DEB500B20AB2 /* Build configuration list for PBXProject "Enigma" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				F8A794F92D33DEB900B20AB2 /* Debug */,
@@ -560,7 +552,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		F8A794FB2D33DEB900B20AB2 /* Build configuration list for PBXNativeTarget "Foorum" */ = {
+		F8A794FB2D33DEB900B20AB2 /* Build configuration list for PBXNativeTarget "Enigma" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				F8A794FC2D33DEB900B20AB2 /* Debug */,
@@ -569,7 +561,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		F8A794FE2D33DEB900B20AB2 /* Build configuration list for PBXNativeTarget "FoorumTests" */ = {
+		F8A794FE2D33DEB900B20AB2 /* Build configuration list for PBXNativeTarget "EnigmaTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				F8A794FF2D33DEB900B20AB2 /* Debug */,
@@ -578,7 +570,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		F8A795012D33DEB900B20AB2 /* Build configuration list for PBXNativeTarget "FoorumUITests" */ = {
+		F8A795012D33DEB900B20AB2 /* Build configuration list for PBXNativeTarget "EnigmaUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				F8A795022D33DEB900B20AB2 /* Debug */,
@@ -590,18 +582,11 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		F81122972D379C93007B7761 /* XCLocalSwiftPackageReference "../../../shared/auth/swift/foorum-auth-client-grpc" */ = {
+		F8DB13C62D3809C600A39060 /* XCLocalSwiftPackageReference "../../../shared/auth/swift/enigma-auth-client-grpc" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = "../../../shared/auth/swift/foorum-auth-client-grpc";
+			relativePath = "../../../shared/auth/swift/enigma-auth-client-grpc";
 		};
 /* End XCLocalSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		F81122982D379C93007B7761 /* FoorumAuthGrpcClient */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = FoorumAuthGrpcClient;
-		};
-/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = F8A794CF2D33DEB500B20AB2 /* Project object */;
 }

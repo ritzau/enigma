@@ -1,5 +1,5 @@
 import SwiftUI
-import FoorumAuthGrpcClient
+import EnigmaAuthGrpcClient
 
 struct LoginView: View {
     @State private var username: String = ""
@@ -9,7 +9,7 @@ struct LoginView: View {
 
     @FocusState private var focusedField: Field? // Tracks which field is focused
 
-    private let authService = FoorumAuthGrpcClient()
+    private let authService = EnigmaAuthGrpcClient()
 
     enum Field: Hashable {
         case username

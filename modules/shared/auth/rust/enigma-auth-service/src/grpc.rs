@@ -1,4 +1,4 @@
-use crate::FoorumAuthService;
+use crate::EnigmaAuthClient;
 use enigma_auth_grpc::{
     auth_server, CreateAccountReply, CreateAccountRequest, DeleteAccountReply,
     DeleteAccountRequest, GetSessionReply, GetSessionRequest, ListAccountsReply,
@@ -8,18 +8,18 @@ use enigma_auth_grpc::{
 use sqlx::types::Uuid;
 use tonic::{Request, Response, Status};
 
-pub struct GrpcAuthService<T: FoorumAuthService> {
+pub struct GrpcAuthService<T: EnigmaAuthClient> {
     auth_service: T,
 }
 
-impl<T: FoorumAuthService> GrpcAuthService<T> {
+impl<T: EnigmaAuthClient> GrpcAuthService<T> {
     pub fn new(auth_service: T) -> Self {
         GrpcAuthService { auth_service }
     }
 }
 
 #[tonic::async_trait]
-impl<T: FoorumAuthService + 'static> auth_server::Auth for GrpcAuthService<T> {
+impl<T: EnigmaAuthClient + 'static> auth_server::Auth for GrpcAuthService<T> {
     async fn create_account(
         &self,
         request: Request<CreateAccountRequest>,

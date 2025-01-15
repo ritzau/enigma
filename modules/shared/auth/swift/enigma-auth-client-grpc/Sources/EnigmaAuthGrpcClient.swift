@@ -2,7 +2,7 @@ import Foundation
 import GRPC
 import NIO
 
-public class FoorumAuthGrpcClient {
+public class EnigmaAuthGrpcClient {
     private let client: Auth_AuthNIOClient
     private let eventLoopGroup: EventLoopGroup
     private let timeout: TimeLimit = .timeout(.seconds(5))
@@ -12,7 +12,7 @@ public class FoorumAuthGrpcClient {
 
         let channel = ClientConnection
 //            .usingPlatformAppropriateTLS(for: self.eventLoopGroup) // Use TLS if needed
-            .insecure(group: self.eventLoopGroup) 
+            .insecure(group: self.eventLoopGroup)
             .connect(host: "localhost", port: 50051) // Update with your server address and port
 
         self.client = Auth_AuthNIOClient(channel: channel)

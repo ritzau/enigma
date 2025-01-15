@@ -10,7 +10,7 @@ pub mod db;
 pub mod grpc;
 
 #[async_trait]
-pub trait FoorumAuthService: Send + Sync {
+pub trait EnigmaAuthClient: Send + Sync {
     async fn create_account(&self, username: &str, password: &str) -> Result<i64, Box<dyn Error>>;
 
     async fn delete_account(&self, user_id: &UserId) -> Result<(), Box<dyn Error>>;
@@ -38,7 +38,7 @@ impl<T: AuthDatabase> DefaultAuthService<T> {
 }
 
 #[async_trait]
-impl<T: AuthDatabase> FoorumAuthService for DefaultAuthService<T> {
+impl<T: AuthDatabase> EnigmaAuthClient for DefaultAuthService<T> {
     async fn create_account(&self, username: &str, password: &str) -> Result<i64, Box<dyn Error>> {
         let id = self
             .db

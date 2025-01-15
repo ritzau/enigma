@@ -6,22 +6,22 @@ let package = Package(
     name: "auth-grpc-client",
     products: [
         .library(
-            name: "FoorumAuthGrpcClient",
-            targets: ["FoorumAuthGrpcClient"]),
+            name: "EnigmaAuthGrpcClient",
+            targets: ["EnigmaAuthGrpcClient"]),
     ],
     dependencies: [
         .package(url: "https://github.com/grpc/grpc-swift", .upToNextMajor(from: "1.24.2")),
     ],
     targets: [
         .target(
-            name: "FoorumAuthGrpcClient",
+            name: "EnigmaAuthGrpcClient",
             dependencies: [
                 .product(name: "GRPC", package: "grpc-swift"),
             ]
         ),
         .testTarget(
             name: "auth-grpcs-client-tests",
-            dependencies: ["FoorumAuthGrpcClient"]
+            dependencies: ["EnigmaAuthGrpcClient"]
         ),
     ]
 )

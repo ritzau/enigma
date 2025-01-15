@@ -1,15 +1,15 @@
 -- Create the database and user
-CREATE DATABASE foorum;
-CREATE USER foorum WITH ENCRYPTED PASSWORD 'bar';
+CREATE DATABASE enigma;
+CREATE USER enigma WITH ENCRYPTED PASSWORD 'bar';
 
 -- Grant privileges
-GRANT ALL PRIVILEGES ON DATABASE foorum TO foorum;
+GRANT ALL PRIVILEGES ON DATABASE enigma TO enigma;
 
 -- Connect to the database to set up schema ownership
-\c foorum postgres
+\c enigma postgres
 
 -- Grant schema privileges or transfer ownership
-ALTER SCHEMA public OWNER TO foorum;
+ALTER SCHEMA public OWNER TO enigma;
 
 -- Optional: Set default search_path for the user
-ALTER ROLE foorum SET search_path = public;
+ALTER ROLE enigma SET search_path = public;

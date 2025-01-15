@@ -1,6 +1,6 @@
-//! This module defines the `FoorumAuthClient` trait and related types for user authentication.
+//! This module defines the `EnigmaAuthClient` trait and related types for user authentication.
 //!
-//! The `FoorumAuthClient` trait provides asynchronous methods for creating accounts, deleting accounts,
+//! The `EnigmaAuthClient` trait provides asynchronous methods for creating accounts, deleting accounts,
 //! retrieving session information, listing accounts, logging in, and purging expired sessions.
 //!
 //! The following types are defined in this module:
@@ -127,10 +127,10 @@ impl Display for AccessToken {
     }
 }
 
-/// The `FoorumAuthClient` trait provides asynchronous methods for creating accounts, deleting accounts,
+/// The `EnigmaAuthClient` trait provides asynchronous methods for creating accounts, deleting accounts,
 /// retrieving session information, listing accounts, logging in, and purging expired sessions.
 #[async_trait]
-pub trait FoorumAuthClient {
+pub trait EnigmaAuthClient {
     /// Asynchronously creates a new user account.
     ///
     /// # Parameters

@@ -1,4 +1,4 @@
-use enigma_auth::{FoorumAuthClient, UserId};
+use enigma_auth::{EnigmaAuthClient, UserId};
 use enigma_auth_grpc::auth_client::AuthClient;
 use enigma_auth_grpc::{
     CreateAccountReply, CreateAccountRequest, DeleteAccountRequest, GetSessionReply,
@@ -28,7 +28,7 @@ impl GrpcAuthClient {
 }
 
 #[async_trait]
-impl FoorumAuthClient for GrpcAuthClient {
+impl EnigmaAuthClient for GrpcAuthClient {
     async fn create_account(
         &mut self,
         username: &str,

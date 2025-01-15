@@ -1,5 +1,5 @@
 import SwiftUI
-import FoorumAuthGrpcClient
+import EnigmaAuthGrpcClient
 
 struct CreateAccountView: View {
     @Environment(\.presentationMode) var presentationMode
@@ -13,7 +13,7 @@ struct CreateAccountView: View {
 
     @FocusState private var focusedField: Field? // Enum to track focused field
 
-    private let authService = FoorumAuthGrpcClient()
+    private let authService = EnigmaAuthGrpcClient()
 
     enum Field: Hashable {
         case username

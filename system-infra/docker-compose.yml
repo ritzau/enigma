@@ -1,7 +1,7 @@
 services:
   db:
     image: postgres:17.2
-    container_name: foorum_postgres
+    container_name: enigma_postgres
     restart: unless-stopped
     environment:
       POSTGRES_PASSWORD: supersecurepassword
@@ -17,7 +17,7 @@ services:
 
   redis:
     image: redis:7.4
-    container_name: foorum_redis
+    container_name: enigma_redis
     restart: unless-stopped
     network_mode: "host"
     ports:
