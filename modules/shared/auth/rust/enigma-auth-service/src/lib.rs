@@ -13,10 +13,17 @@ pub mod db;
 pub mod grpc;
 
 #[async_trait]
-pub trait EnigmaAuthClient: Send + Sync {
+pub trait EnigmaAuthService: Send + Sync {
     async fn create_account(&self, username: &str, password: &str) -> Result<i64, Box<dyn Error>>;
 
     async fn delete_account(&self, user_id: &UserId) -> Result<(), Box<dyn Error>>;
+
+    async fn change_password(
+        &self,
+        user_id: &UserId,
+        old_password: &str,
+        new_password: &str,
+    ) -> Result<(), Box<dyn Error>>;
 
     async fn login(&self, username: &str, password: &str) -> Result<Uuid, Box<dyn Error>>;
 
@@ -41,7 +48,7 @@ impl<T: AuthDatabase> DefaultAuthService<T> {
 }
 
 #[async_trait]
-impl<T: AuthDatabase> EnigmaAuthClient for DefaultAuthService<T> {
+impl<T: AuthDatabase> EnigmaAuthService for DefaultAuthService<T> {
     async fn create_account(&self, username: &str, password: &str) -> Result<i64, Box<dyn Error>> {
         let hash = hash(password).map_err(|e| format!("Failed to hash password: {}", e))?;
 
@@ -52,6 +59,18 @@ impl<T: AuthDatabase> EnigmaAuthClient for DefaultAuthService<T> {
 
     async fn delete_account(&self, user_id: &UserId) -> Result<(), Box<dyn Error>> {
         self.db.delete_user(user_id).await
+    }
+
+    async fn change_password(&self, user_id: &UserId, old_password: &str, new_password: &str) -> Result<(), Box<dyn Error>> {
+        let password_hash = self.db.hash(user_id).await?;
+
+        if verify_password(&password_hash, old_password).unwrap_or(false) {
+            let new_hash = hash(new_password).map_err(|e| format!("Failed to hash password: {}", e))?;
+            self.db.set_hash(&user_id, &new_hash).await?;
+            Ok(())
+        } else {
+            Err("Invalid password".into())
+        }
     }
 
     async fn login(&self, username: &str, password: &str) -> Result<Uuid, Box<dyn Error>> {

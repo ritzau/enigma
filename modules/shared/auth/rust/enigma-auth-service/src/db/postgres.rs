@@ -100,11 +100,7 @@ impl AuthDatabase for PostgresAuthDatabase {
     }
 
     #[instrument(skip_all, err, fields(%user_id))]
-    async fn set_hash(
-        &mut self,
-        user_id: &UserId,
-        hash: &PasswordHash,
-    ) -> Result<(), Box<dyn Error>> {
+    async fn set_hash(&self, user_id: &UserId, hash: &PasswordHash) -> Result<(), Box<dyn Error>> {
         sqlx::query!(
             "UPDATE users SET hash = $1 WHERE id = $2",
             hash.as_str(),

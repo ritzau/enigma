@@ -16,11 +16,7 @@ pub trait AuthDatabase: Send + Sync {
     ) -> Result<UserId, Box<dyn Error>>;
     async fn user_id(&self, username: &UserName) -> Result<UserId, Box<dyn Error>>;
     async fn delete_user(&self, user_id: &UserId) -> Result<(), Box<dyn Error>>;
-    async fn set_hash(
-        &mut self,
-        user_id: &UserId,
-        hash: &PasswordHash,
-    ) -> Result<(), Box<dyn Error>>;
+    async fn set_hash(&self, user_id: &UserId, hash: &PasswordHash) -> Result<(), Box<dyn Error>>;
     async fn hash(&self, user_id: &UserId) -> Result<PasswordHash, Box<dyn Error>>;
     async fn list_accounts(&self) -> Result<Vec<(UserId, UserName)>, Box<dyn Error>>;
     async fn create_session(&self, user_id: &UserId, ttl: Duration)

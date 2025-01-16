@@ -5,6 +5,7 @@ package auth;
 service Auth {
     rpc CreateAccount (CreateAccountRequest) returns (CreateAccountReply) {}
     rpc DeleteAccount (DeleteAccountRequest) returns (DeleteAccountReply) {}
+    rpc ChangePassword (ChangePasswordRequest) returns (ChangePasswordReply) {}
     rpc ListAccounts (ListAccountsRequest) returns (ListAccountsReply) {}
     rpc Login (LoginRequest) returns (LoginReply) {}
     rpc GetSession (GetSessionRequest) returns (GetSessionReply) {}
@@ -25,6 +26,15 @@ message DeleteAccountRequest {
 }
 
 message DeleteAccountReply {
+}
+
+message ChangePasswordRequest {
+    int64 user_id = 1;
+    string old_password = 2;
+    string new_password = 3;
+}
+
+message ChangePasswordReply {
 }
 
 message ListAccountsRequest {

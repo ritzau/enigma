@@ -26,6 +26,11 @@ internal protocol Auth_AuthClientProtocol: GRPCClient {
     callOptions: CallOptions?
   ) -> UnaryCall<Auth_DeleteAccountRequest, Auth_DeleteAccountReply>
 
+  func changePassword(
+    _ request: Auth_ChangePasswordRequest,
+    callOptions: CallOptions?
+  ) -> UnaryCall<Auth_ChangePasswordRequest, Auth_ChangePasswordReply>
+
   func listAccounts(
     _ request: Auth_ListAccountsRequest,
     callOptions: CallOptions?
@@ -85,6 +90,24 @@ extension Auth_AuthClientProtocol {
       request: request,
       callOptions: callOptions ?? self.defaultCallOptions,
       interceptors: self.interceptors?.makeDeleteAccountInterceptors() ?? []
+    )
+  }
+
+  /// Unary call to ChangePassword
+  ///
+  /// - Parameters:
+  ///   - request: Request to send to ChangePassword.
+  ///   - callOptions: Call options.
+  /// - Returns: A `UnaryCall` with futures for the metadata, status and response.
+  internal func changePassword(
+    _ request: Auth_ChangePasswordRequest,
+    callOptions: CallOptions? = nil
+  ) -> UnaryCall<Auth_ChangePasswordRequest, Auth_ChangePasswordReply> {
+    return self.makeUnaryCall(
+      path: Auth_AuthClientMetadata.Methods.changePassword.path,
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeChangePasswordInterceptors() ?? []
     )
   }
 
@@ -233,6 +256,11 @@ internal protocol Auth_AuthAsyncClientProtocol: GRPCClient {
     callOptions: CallOptions?
   ) -> GRPCAsyncUnaryCall<Auth_DeleteAccountRequest, Auth_DeleteAccountReply>
 
+  func makeChangePasswordCall(
+    _ request: Auth_ChangePasswordRequest,
+    callOptions: CallOptions?
+  ) -> GRPCAsyncUnaryCall<Auth_ChangePasswordRequest, Auth_ChangePasswordReply>
+
   func makeListAccountsCall(
     _ request: Auth_ListAccountsRequest,
     callOptions: CallOptions?
@@ -285,6 +313,18 @@ extension Auth_AuthAsyncClientProtocol {
       request: request,
       callOptions: callOptions ?? self.defaultCallOptions,
       interceptors: self.interceptors?.makeDeleteAccountInterceptors() ?? []
+    )
+  }
+
+  internal func makeChangePasswordCall(
+    _ request: Auth_ChangePasswordRequest,
+    callOptions: CallOptions? = nil
+  ) -> GRPCAsyncUnaryCall<Auth_ChangePasswordRequest, Auth_ChangePasswordReply> {
+    return self.makeAsyncUnaryCall(
+      path: Auth_AuthClientMetadata.Methods.changePassword.path,
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeChangePasswordInterceptors() ?? []
     )
   }
 
@@ -363,6 +403,18 @@ extension Auth_AuthAsyncClientProtocol {
     )
   }
 
+  internal func changePassword(
+    _ request: Auth_ChangePasswordRequest,
+    callOptions: CallOptions? = nil
+  ) async throws -> Auth_ChangePasswordReply {
+    return try await self.performAsyncUnaryCall(
+      path: Auth_AuthClientMetadata.Methods.changePassword.path,
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeChangePasswordInterceptors() ?? []
+    )
+  }
+
   internal func listAccounts(
     _ request: Auth_ListAccountsRequest,
     callOptions: CallOptions? = nil
@@ -437,6 +489,9 @@ internal protocol Auth_AuthClientInterceptorFactoryProtocol: Sendable {
   /// - Returns: Interceptors to use when invoking 'deleteAccount'.
   func makeDeleteAccountInterceptors() -> [ClientInterceptor<Auth_DeleteAccountRequest, Auth_DeleteAccountReply>]
 
+  /// - Returns: Interceptors to use when invoking 'changePassword'.
+  func makeChangePasswordInterceptors() -> [ClientInterceptor<Auth_ChangePasswordRequest, Auth_ChangePasswordReply>]
+
   /// - Returns: Interceptors to use when invoking 'listAccounts'.
   func makeListAccountsInterceptors() -> [ClientInterceptor<Auth_ListAccountsRequest, Auth_ListAccountsReply>]
 
@@ -457,6 +512,7 @@ internal enum Auth_AuthClientMetadata {
     methods: [
       Auth_AuthClientMetadata.Methods.createAccount,
       Auth_AuthClientMetadata.Methods.deleteAccount,
+      Auth_AuthClientMetadata.Methods.changePassword,
       Auth_AuthClientMetadata.Methods.listAccounts,
       Auth_AuthClientMetadata.Methods.login,
       Auth_AuthClientMetadata.Methods.getSession,
@@ -474,6 +530,12 @@ internal enum Auth_AuthClientMetadata {
     internal static let deleteAccount = GRPCMethodDescriptor(
       name: "DeleteAccount",
       path: "/auth.Auth/DeleteAccount",
+      type: GRPCCallType.unary
+    )
+
+    internal static let changePassword = GRPCMethodDescriptor(
+      name: "ChangePassword",
+      path: "/auth.Auth/ChangePassword",
       type: GRPCCallType.unary
     )
 
@@ -510,6 +572,8 @@ internal protocol Auth_AuthProvider: CallHandlerProvider {
   func createAccount(request: Auth_CreateAccountRequest, context: StatusOnlyCallContext) -> EventLoopFuture<Auth_CreateAccountReply>
 
   func deleteAccount(request: Auth_DeleteAccountRequest, context: StatusOnlyCallContext) -> EventLoopFuture<Auth_DeleteAccountReply>
+
+  func changePassword(request: Auth_ChangePasswordRequest, context: StatusOnlyCallContext) -> EventLoopFuture<Auth_ChangePasswordReply>
 
   func listAccounts(request: Auth_ListAccountsRequest, context: StatusOnlyCallContext) -> EventLoopFuture<Auth_ListAccountsReply>
 
@@ -548,6 +612,15 @@ extension Auth_AuthProvider {
         responseSerializer: ProtobufSerializer<Auth_DeleteAccountReply>(),
         interceptors: self.interceptors?.makeDeleteAccountInterceptors() ?? [],
         userFunction: self.deleteAccount(request:context:)
+      )
+
+    case "ChangePassword":
+      return UnaryServerHandler(
+        context: context,
+        requestDeserializer: ProtobufDeserializer<Auth_ChangePasswordRequest>(),
+        responseSerializer: ProtobufSerializer<Auth_ChangePasswordReply>(),
+        interceptors: self.interceptors?.makeChangePasswordInterceptors() ?? [],
+        userFunction: self.changePassword(request:context:)
       )
 
     case "ListAccounts":
@@ -608,6 +681,11 @@ internal protocol Auth_AuthAsyncProvider: CallHandlerProvider, Sendable {
     context: GRPCAsyncServerCallContext
   ) async throws -> Auth_DeleteAccountReply
 
+  func changePassword(
+    request: Auth_ChangePasswordRequest,
+    context: GRPCAsyncServerCallContext
+  ) async throws -> Auth_ChangePasswordReply
+
   func listAccounts(
     request: Auth_ListAccountsRequest,
     context: GRPCAsyncServerCallContext
@@ -666,6 +744,15 @@ extension Auth_AuthAsyncProvider {
         wrapping: { try await self.deleteAccount(request: $0, context: $1) }
       )
 
+    case "ChangePassword":
+      return GRPCAsyncServerHandler(
+        context: context,
+        requestDeserializer: ProtobufDeserializer<Auth_ChangePasswordRequest>(),
+        responseSerializer: ProtobufSerializer<Auth_ChangePasswordReply>(),
+        interceptors: self.interceptors?.makeChangePasswordInterceptors() ?? [],
+        wrapping: { try await self.changePassword(request: $0, context: $1) }
+      )
+
     case "ListAccounts":
       return GRPCAsyncServerHandler(
         context: context,
@@ -718,6 +805,10 @@ internal protocol Auth_AuthServerInterceptorFactoryProtocol: Sendable {
   ///   Defaults to calling `self.makeInterceptors()`.
   func makeDeleteAccountInterceptors() -> [ServerInterceptor<Auth_DeleteAccountRequest, Auth_DeleteAccountReply>]
 
+  /// - Returns: Interceptors to use when handling 'changePassword'.
+  ///   Defaults to calling `self.makeInterceptors()`.
+  func makeChangePasswordInterceptors() -> [ServerInterceptor<Auth_ChangePasswordRequest, Auth_ChangePasswordReply>]
+
   /// - Returns: Interceptors to use when handling 'listAccounts'.
   ///   Defaults to calling `self.makeInterceptors()`.
   func makeListAccountsInterceptors() -> [ServerInterceptor<Auth_ListAccountsRequest, Auth_ListAccountsReply>]
@@ -742,6 +833,7 @@ internal enum Auth_AuthServerMetadata {
     methods: [
       Auth_AuthServerMetadata.Methods.createAccount,
       Auth_AuthServerMetadata.Methods.deleteAccount,
+      Auth_AuthServerMetadata.Methods.changePassword,
       Auth_AuthServerMetadata.Methods.listAccounts,
       Auth_AuthServerMetadata.Methods.login,
       Auth_AuthServerMetadata.Methods.getSession,
@@ -759,6 +851,12 @@ internal enum Auth_AuthServerMetadata {
     internal static let deleteAccount = GRPCMethodDescriptor(
       name: "DeleteAccount",
       path: "/auth.Auth/DeleteAccount",
+      type: GRPCCallType.unary
+    )
+
+    internal static let changePassword = GRPCMethodDescriptor(
+      name: "ChangePassword",
+      path: "/auth.Auth/ChangePassword",
       type: GRPCCallType.unary
     )
 

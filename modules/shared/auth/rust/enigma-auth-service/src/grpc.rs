@@ -1,26 +1,27 @@
-use crate::EnigmaAuthClient;
+use crate::EnigmaAuthService;
 use enigma_auth_grpc::{
-    auth_server, CreateAccountReply, CreateAccountRequest, DeleteAccountReply,
-    DeleteAccountRequest, GetSessionReply, GetSessionRequest, ListAccountsReply,
-    ListAccountsRequest, LoginReply, LoginRequest, PurgeExpiredSessionsReply,
-    PurgeExpiredSessionsRequest, User,
+    auth_server, ChangePasswordReply, ChangePasswordRequest, CreateAccountReply,
+    CreateAccountRequest, DeleteAccountReply, DeleteAccountRequest, GetSessionReply,
+    GetSessionRequest, ListAccountsReply, ListAccountsRequest, LoginReply, LoginRequest,
+    PurgeExpiredSessionsReply, PurgeExpiredSessionsRequest, User,
 };
 use sqlx::types::Uuid;
 use tonic::{Request, Response, Status};
 use tracing::instrument;
+use enigma_auth::UserId;
 
-pub struct GrpcAuthService<T: EnigmaAuthClient> {
+pub struct GrpcAuthService<T: EnigmaAuthService> {
     auth_service: T,
 }
 
-impl<T: EnigmaAuthClient> GrpcAuthService<T> {
+impl<T: EnigmaAuthService> GrpcAuthService<T> {
     pub fn new(auth_service: T) -> Self {
         GrpcAuthService { auth_service }
     }
 }
 
 #[tonic::async_trait]
-impl<T: EnigmaAuthClient + 'static> auth_server::Auth for GrpcAuthService<T> {
+impl<T: EnigmaAuthService + 'static> auth_server::Auth for GrpcAuthService<T> {
     #[instrument(
         err,
         skip(self, request),
@@ -64,6 +65,30 @@ impl<T: EnigmaAuthClient + 'static> auth_server::Auth for GrpcAuthService<T> {
             Ok(_) => Ok(Response::new(DeleteAccountReply {})),
             Err(e) => Err(Status::internal(e.to_string())),
         }
+    }
+
+    #[instrument(
+        err,
+        skip(self, request),
+        fields(
+            caller = to_caller_string(&request),
+            user_id = request.get_ref().user_id))]
+    async fn change_password(
+        &self,
+        request: Request<ChangePasswordRequest>,
+    ) -> Result<Response<ChangePasswordReply>, Status> {
+        let request = request.get_ref();
+        self.auth_service
+            .change_password(
+                &UserId::from(request.user_id),
+                &request.old_password,
+                &request.new_password,
+            )
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        let reply = ChangePasswordReply {};
+        Ok(Response::new(reply))
     }
 
     #[instrument(err, skip(self, _request), fields(caller = to_caller_string(&_request)))]

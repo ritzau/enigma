@@ -165,6 +165,22 @@ pub trait EnigmaAuthClient {
     ///   On success, it returns an empty tuple `()`. On failure, it returns a boxed dynamic error.
     async fn delete_account(&mut self, user_id: &UserId) -> Result<(), Box<dyn std::error::Error>>;
 
+    /// Asynchronously changes a user's password.
+    ///
+    /// # Parameters
+    /// - `user_id: i64`: The ID of the user.
+    /// - `old_password: &str`: The user's current password.
+    /// - `new_password: &str`: The user's new password.
+    ///
+    /// # Returns
+    /// - `Result<(), Box<dyn std::error::Error>>`: The function returns a `Result` type.
+    async fn change_password(
+        &mut self,
+        user_id: i64,
+        old_password: &str,
+        new_password: &str,
+    ) -> Result<(), Box<dyn std::error::Error>>;
+
     /// Asynchronously retrieves session information.
     ///
     /// # Parameters

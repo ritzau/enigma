@@ -1,8 +1,5 @@
 use enigma_auth::{EnigmaAuthClient, UserId};
-use enigma_auth_grpc::{
-    auth_client::AuthClient, CreateAccountRequest, DeleteAccountRequest, GetSessionRequest,
-    ListAccountsRequest, LoginRequest, PurgeExpiredSessionsRequest,
-};
+use enigma_auth_grpc::{auth_client::AuthClient, ChangePasswordRequest, CreateAccountRequest, DeleteAccountRequest, GetSessionRequest, ListAccountsRequest, LoginRequest, PurgeExpiredSessionsRequest};
 use std::convert::Into;
 use tonic::async_trait;
 use tonic::transport::Channel;
@@ -55,6 +52,22 @@ impl EnigmaAuthClient for GrpcAuthClient {
 
         self.client.delete_account(request).await?;
 
+        Ok(())
+    }
+
+    #[instrument(skip(self), err)]
+    async fn change_password(
+        &mut self,
+        user_id: i64,
+        old_password: &str,
+        new_password: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let request = tonic::Request::new(ChangePasswordRequest {
+            user_id: user_id,
+            old_password: old_password.into(),
+            new_password: new_password.into(),
+        });
+        let _response = self.client.change_password(request).await?;
         Ok(())
     }
 

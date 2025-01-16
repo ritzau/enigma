@@ -21,6 +21,7 @@ enum Commands {
 enum AuthCommands {
     Create { username: String, password: String },
     Delete { user_id: i64 },
+    ChangePassword { user_id: i64, old_password: String, new_password: String },
     GetSession { access_token: String },
     List,
     Login { username: String, password: String },
@@ -46,6 +47,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             AuthCommands::Delete { user_id } => {
                 let mut client = GrpcAuthClient::default().await?;
                 let response = client.delete_account(&user_id.into()).await?;
+                println!("RESPONSE={:?}", response);
+            }
+            AuthCommands::ChangePassword { user_id, old_password, new_password } => {
+                let mut client = GrpcAuthClient::default().await?;
+                let response = client.change_password(user_id, &old_password, &new_password).await?;
                 println!("RESPONSE={:?}", response);
             }
             AuthCommands::GetSession { access_token } => {
