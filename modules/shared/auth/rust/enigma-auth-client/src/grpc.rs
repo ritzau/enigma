@@ -1,12 +1,12 @@
 use enigma_auth::{EnigmaAuthClient, UserId};
-use enigma_auth_grpc::auth_client::AuthClient;
 use enigma_auth_grpc::{
-    CreateAccountReply, CreateAccountRequest, DeleteAccountRequest, GetSessionReply,
-    GetSessionRequest, ListAccountsReply, ListAccountsRequest, LoginReply, LoginRequest,
-    PurgeExpiredSessionsReply, PurgeExpiredSessionsRequest,
+    auth_client::AuthClient, CreateAccountRequest, DeleteAccountRequest, GetSessionRequest,
+    ListAccountsRequest, LoginRequest, PurgeExpiredSessionsRequest,
 };
+use std::convert::Into;
+use tonic::async_trait;
 use tonic::transport::Channel;
-use tonic::{async_trait, Response};
+use tracing::instrument;
 use uuid::Uuid;
 
 pub struct GrpcAuthClient {
@@ -18,8 +18,10 @@ impl GrpcAuthClient {
         GrpcAuthClient { client }
     }
 
+    #[instrument(err)]
     pub async fn connect(url: &str) -> Result<Self, Box<dyn std::error::Error>> {
-        Ok(Self::new(AuthClient::connect(String::from(url)).await?))
+        let client = AuthClient::connect(String::from(url)).await?;
+        Ok(Self::new(client))
     }
 
     pub async fn default() -> Result<Self, Box<dyn std::error::Error>> {
@@ -29,25 +31,23 @@ impl GrpcAuthClient {
 
 #[async_trait]
 impl EnigmaAuthClient for GrpcAuthClient {
+    #[instrument(skip(self, password), err)]
     async fn create_account(
         &mut self,
         username: &str,
         password: &str,
     ) -> Result<UserId, Box<dyn std::error::Error>> {
-        println!(
-            "Sending request to create account: {}/{}",
-            username, password
-        );
-
         let request = tonic::Request::new(CreateAccountRequest {
             username: username.into(),
             password: password.into(),
         });
 
-        let response: Response<CreateAccountReply> = self.client.create_account(request).await?;
+        let response = self.client.create_account(request).await?;
 
         Ok(UserId::from(response.get_ref().user_id))
     }
+
+    #[instrument(skip(self), err)]
     async fn delete_account(&mut self, user_id: &UserId) -> Result<(), Box<dyn std::error::Error>> {
         let request = tonic::Request::new(DeleteAccountRequest {
             user_id: user_id.value(),
@@ -57,6 +57,8 @@ impl EnigmaAuthClient for GrpcAuthClient {
 
         Ok(())
     }
+
+    #[instrument(skip(self), err)]
     async fn get_session(
         &mut self,
         access_token: &Uuid,
@@ -65,22 +67,26 @@ impl EnigmaAuthClient for GrpcAuthClient {
             access_token: access_token.to_string(),
         });
 
-        let response: Response<GetSessionReply> = self.client.get_session(request).await?;
+        let response = self.client.get_session(request).await?;
 
         Ok(UserId::from(response.get_ref().user_id))
     }
+
+    #[instrument(skip(self), err)]
     async fn list_accounts(&mut self) -> Result<Vec<(UserId, String)>, Box<dyn std::error::Error>> {
         let request = tonic::Request::new(ListAccountsRequest {});
+        let response = self.client.list_accounts(request).await?;
 
-        let response: Response<ListAccountsReply> = self.client.list_accounts(request).await?;
-
-        Ok(response
-            .get_ref()
-            .users
+        let users = &response.get_ref().users;
+        let result = users
             .iter()
             .map(|user| (UserId::from(user.id), user.name.clone()))
-            .collect())
+            .collect();
+
+        Ok(result)
     }
+
+    #[instrument(skip(self, password), err)]
     async fn login(
         &mut self,
         username: &str,
@@ -91,14 +97,15 @@ impl EnigmaAuthClient for GrpcAuthClient {
             password: password.into(),
         });
 
-        let response: Response<LoginReply> = self.client.login(request).await?;
+        let response = self.client.login(request).await?;
 
         Ok(response.get_ref().access_token.clone())
     }
+
+    #[instrument(skip(self), err)]
     async fn purge_expired_sessions(&mut self) -> Result<u64, Box<dyn std::error::Error>> {
         let request = tonic::Request::new(PurgeExpiredSessionsRequest {});
-        let response: Response<PurgeExpiredSessionsReply> =
-            self.client.purge_expired_sessions(request).await?;
+        let response = self.client.purge_expired_sessions(request).await?;
         Ok(response.get_ref().purged_session_count)
     }
 }

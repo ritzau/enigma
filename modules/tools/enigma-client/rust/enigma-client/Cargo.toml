@@ -5,7 +5,9 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "4.5.26", features = ["derive"] }
-enigma-auth= { path = "../../../../shared/auth/rust/enigma-auth" }
 enigma-auth-client = { path = "../../../../shared/auth/rust/enigma-auth-client", features = ["grpc"] }
+enigma-auth= { path = "../../../../shared/auth/rust/enigma-auth" }
 tokio = { version = "1.43.0", features = ["rt-multi-thread"] }
+tracing = "0.1.41"
+tracing-subscriber = "0.3.19"
 uuid = { version = "1.11.1", features = ["v4"] }

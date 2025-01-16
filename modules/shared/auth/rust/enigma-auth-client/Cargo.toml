@@ -10,5 +10,7 @@ grpc = ["dep:enigma-auth-grpc"]
 [dependencies]
 enigma-auth = { path = "../enigma-auth" }
 enigma-auth-grpc = { path = "../enigma-auth-grpc", optional = true }
+log = { version = "0.4.25", features = ["kv"] }
 tonic = "0.12.3"
+tracing = "0.1.41"
 uuid = { version = "1.11.0", features = ["v4"] }

@@ -9,12 +9,14 @@ use std::time::Duration;
 use time::format_description::well_known::Rfc3339;
 use time::OffsetDateTime;
 use tonic::async_trait;
+use tracing::instrument;
 
 pub struct PostgresAuthDatabase {
     pool: Pool<Postgres>,
 }
 
 impl PostgresAuthDatabase {
+    #[instrument(err)]
     pub async fn new() -> Result<Self, Box<dyn Error>> {
         dotenvy::dotenv()?;
         let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
@@ -59,13 +61,12 @@ CREATE TABLE IF NOT EXISTS sessions (
 
 #[async_trait]
 impl AuthDatabase for PostgresAuthDatabase {
+    #[instrument(skip(self, hash), err)]
     async fn create_account(
         &self,
         username: &UserName,
         hash: &PasswordHash,
     ) -> Result<UserId, Box<dyn Error>> {
-        println!("Inserting user entry: {}/{}", username, hash);
-
         let id = sqlx::query_scalar!(
             "INSERT INTO users (username, hash) VALUES ($1, $2) RETURNING id",
             username.as_str(),
@@ -77,6 +78,7 @@ impl AuthDatabase for PostgresAuthDatabase {
         Ok(id.into())
     }
 
+    #[instrument(skip(self), err)]
     async fn user_id(&self, username: &UserName) -> Result<UserId, Box<dyn Error>> {
         let row = sqlx::query!(
             "SELECT id FROM users WHERE username = $1",
@@ -88,6 +90,7 @@ impl AuthDatabase for PostgresAuthDatabase {
         Ok(row.id.into())
     }
 
+    #[instrument(skip(self), err)]
     async fn delete_user(&self, user_id: &UserId) -> Result<(), Box<dyn Error>> {
         sqlx::query!("DELETE FROM users WHERE id = $1", user_id.value())
             .execute(&self.pool)
@@ -96,6 +99,7 @@ impl AuthDatabase for PostgresAuthDatabase {
         Ok(())
     }
 
+    #[instrument(skip(self), err)]
     async fn set_hash(
         &mut self,
         user_id: &UserId,
@@ -112,6 +116,7 @@ impl AuthDatabase for PostgresAuthDatabase {
         Ok(())
     }
 
+    #[instrument(skip(self), err)]
     async fn hash(&self, user_id: &UserId) -> Result<PasswordHash, Box<dyn Error>> {
         let row = sqlx::query!("SELECT hash FROM users WHERE id = $1", user_id.value())
             .fetch_one(&self.pool)
@@ -120,6 +125,7 @@ impl AuthDatabase for PostgresAuthDatabase {
         Ok(row.hash.into())
     }
 
+    #[instrument(skip(self), err)]
     async fn list_accounts(&self) -> Result<Vec<(UserId, UserName)>, Box<dyn Error>> {
         let rows = sqlx::query!("SELECT id, username FROM users")
             .fetch_all(&self.pool)
@@ -133,6 +139,7 @@ impl AuthDatabase for PostgresAuthDatabase {
         Ok(users)
     }
 
+    #[instrument(skip(self), err)]
     async fn create_session(
         &self,
         user_id: &UserId,
@@ -151,6 +158,7 @@ impl AuthDatabase for PostgresAuthDatabase {
         Ok(session_id)
     }
 
+    #[instrument(skip(self, access_token), err)]
     async fn session(
         &self,
         access_token: &AccessToken,
@@ -165,6 +173,7 @@ impl AuthDatabase for PostgresAuthDatabase {
         Ok((UserId::from(row.user_id), row.expires_at))
     }
 
+    #[instrument(skip(self), err)]
     async fn purge_expired_sessions(&self, now: OffsetDateTime) -> Result<u64, Box<dyn Error>> {
         let result = sqlx::query!("DELETE FROM sessions WHERE expires_at < $1", now)
             .execute(&self.pool)

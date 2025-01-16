@@ -1,4 +1,5 @@
 use clap::{Parser, Subcommand};
+use tracing_subscriber::fmt::format::FmtSpan;
 use enigma_auth::EnigmaAuthClient;
 use enigma_auth_client::grpc::GrpcAuthClient;
 use uuid::Uuid;
@@ -29,6 +30,10 @@ enum AuthCommands {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    tracing_subscriber::fmt()
+        .with_span_events(FmtSpan::NEW | FmtSpan::CLOSE)
+        .init();
+
     let cli = Cli::parse();
 
     match cli.command {
