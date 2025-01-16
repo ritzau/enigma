@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS sessions (
 
 #[async_trait]
 impl AuthDatabase for PostgresAuthDatabase {
-    #[instrument(skip(self, hash), err)]
+    #[instrument(skip_all, err, fields(%username))]
     async fn create_account(
         &self,
         username: &UserName,
@@ -78,7 +78,7 @@ impl AuthDatabase for PostgresAuthDatabase {
         Ok(id.into())
     }
 
-    #[instrument(skip(self), err)]
+    #[instrument(skip_all, err, fields(%username))]
     async fn user_id(&self, username: &UserName) -> Result<UserId, Box<dyn Error>> {
         let row = sqlx::query!(
             "SELECT id FROM users WHERE username = $1",
@@ -90,7 +90,7 @@ impl AuthDatabase for PostgresAuthDatabase {
         Ok(row.id.into())
     }
 
-    #[instrument(skip(self), err)]
+    #[instrument(skip_all, err, fields(%user_id))]
     async fn delete_user(&self, user_id: &UserId) -> Result<(), Box<dyn Error>> {
         sqlx::query!("DELETE FROM users WHERE id = $1", user_id.value())
             .execute(&self.pool)
@@ -99,7 +99,7 @@ impl AuthDatabase for PostgresAuthDatabase {
         Ok(())
     }
 
-    #[instrument(skip(self), err)]
+    #[instrument(skip_all, err, fields(%user_id))]
     async fn set_hash(
         &mut self,
         user_id: &UserId,
@@ -116,7 +116,7 @@ impl AuthDatabase for PostgresAuthDatabase {
         Ok(())
     }
 
-    #[instrument(skip(self), err)]
+    #[instrument(skip_all, err, fields(%user_id))]
     async fn hash(&self, user_id: &UserId) -> Result<PasswordHash, Box<dyn Error>> {
         let row = sqlx::query!("SELECT hash FROM users WHERE id = $1", user_id.value())
             .fetch_one(&self.pool)
@@ -125,7 +125,7 @@ impl AuthDatabase for PostgresAuthDatabase {
         Ok(row.hash.into())
     }
 
-    #[instrument(skip(self), err)]
+    #[instrument(skip_all, err)]
     async fn list_accounts(&self) -> Result<Vec<(UserId, UserName)>, Box<dyn Error>> {
         let rows = sqlx::query!("SELECT id, username FROM users")
             .fetch_all(&self.pool)
@@ -139,7 +139,7 @@ impl AuthDatabase for PostgresAuthDatabase {
         Ok(users)
     }
 
-    #[instrument(skip(self), err)]
+    #[instrument(skip_all, err, fields(%user_id, ttl))]
     async fn create_session(
         &self,
         user_id: &UserId,
@@ -158,7 +158,7 @@ impl AuthDatabase for PostgresAuthDatabase {
         Ok(session_id)
     }
 
-    #[instrument(skip(self, access_token), err)]
+    #[instrument(skip_all, err, fields(%access_token))]
     async fn session(
         &self,
         access_token: &AccessToken,
@@ -173,7 +173,7 @@ impl AuthDatabase for PostgresAuthDatabase {
         Ok((UserId::from(row.user_id), row.expires_at))
     }
 
-    #[instrument(skip(self), err)]
+    #[instrument(skip_all, err, fields(%now))]
     async fn purge_expired_sessions(&self, now: OffsetDateTime) -> Result<u64, Box<dyn Error>> {
         let result = sqlx::query!("DELETE FROM sessions WHERE expires_at < $1", now)
             .execute(&self.pool)

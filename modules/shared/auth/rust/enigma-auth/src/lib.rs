@@ -24,6 +24,13 @@ impl UserId {
     }
 }
 
+impl Display for UserId {
+    /// Formats the user ID.
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 impl From<i64> for UserId {
     /// Converts an `i64` to a `UserId`.
     fn from(value: i64) -> Self {
@@ -52,7 +59,7 @@ impl UserName {
 impl Display for UserName {
     /// Formats the user name.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0.clone())
+        write!(f, "{}", self.0)
     }
 }
 
