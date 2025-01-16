@@ -1,3 +1,6 @@
+use argon2::password_hash::rand_core::OsRng;
+use argon2::password_hash::SaltString;
+use argon2::{password_hash, Argon2, PasswordHasher, PasswordVerifier};
 use db::AuthDatabase;
 use enigma_auth::{AccessToken, PasswordHash, UserId};
 use sqlx::types::Uuid;
@@ -40,10 +43,9 @@ impl<T: AuthDatabase> DefaultAuthService<T> {
 #[async_trait]
 impl<T: AuthDatabase> EnigmaAuthClient for DefaultAuthService<T> {
     async fn create_account(&self, username: &str, password: &str) -> Result<i64, Box<dyn Error>> {
-        let id = self
-            .db
-            .create_account(&username.into(), &password.into())
-            .await?;
+        let hash = hash(password).map_err(|e| format!("Failed to hash password: {}", e))?;
+
+        let id = self.db.create_account(&username.into(), &hash).await?;
 
         Ok(id.value())
     }
@@ -57,7 +59,7 @@ impl<T: AuthDatabase> EnigmaAuthClient for DefaultAuthService<T> {
 
         let hash = self.db.hash(&user_id).await?;
 
-        if hash == PasswordHash::from(password) {
+        if verify_password(&hash, password).unwrap_or(false) {
             Ok(self
                 .db
                 .create_session(&user_id, std::time::Duration::from_secs(60))
@@ -94,4 +96,28 @@ impl<T: AuthDatabase> EnigmaAuthClient for DefaultAuthService<T> {
             .purge_expired_sessions(time::OffsetDateTime::now_utc())
             .await?)
     }
+}
+
+fn argon_config() -> Argon2<'static> {
+    Argon2::default()
+}
+
+fn hash(password: &str) -> Result<PasswordHash, password_hash::Error> {
+    let salt = SaltString::generate(&mut OsRng);
+    let argon2 = argon_config();
+    let hash = argon2
+        .hash_password(password.as_bytes(), &salt)?
+        .to_string();
+    let hash = PasswordHash::from(hash.as_str());
+    assert!(verify_password(&hash, password)?);
+
+    Ok(hash)
+}
+
+fn verify_password(hash: &PasswordHash, password: &str) -> Result<bool, password_hash::Error> {
+    let argon2 = argon_config();
+    let parsed_hash = argon2::PasswordHash::new(&hash.as_str())?;
+    Ok(argon2
+        .verify_password(password.as_bytes(), &parsed_hash)
+        .is_ok())
 }

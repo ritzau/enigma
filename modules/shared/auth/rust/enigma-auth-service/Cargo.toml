@@ -8,6 +8,7 @@ default = ["grpc"]
 grpc = ["dep:enigma-auth-grpc"]
 
 [dependencies]
+argon2 = "0.5.3"
 chrono = "0.4.39"
 dotenvy = "0.15.7"
 enigma-auth = { path = "../enigma-auth" }
