@@ -112,9 +112,12 @@ impl AuthDatabase for PostgresAuthDatabase {
 
     #[instrument(skip_all, err, fields(%user_id))]
     async fn hash(&self, user_id: &UserId) -> Result<PasswordHash, Box<dyn Error>> {
-        let row = sqlx::query!("SELECT hash FROM accounts WHERE user_id = $1", user_id.value())
-            .fetch_one(&self.pool)
-            .await?;
+        let row = sqlx::query!(
+            "SELECT hash FROM accounts WHERE user_id = $1",
+            user_id.value()
+        )
+        .fetch_one(&self.pool)
+        .await?;
 
         Ok(row.hash.into())
     }

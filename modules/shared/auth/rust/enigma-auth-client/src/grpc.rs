@@ -128,7 +128,7 @@ impl EnigmaAuthClient for GrpcAuthClient {
         });
 
         let response = self.client.login(request).await?.into_inner();
-        
+
         Ok((
             AccessToken::from(Uuid::parse_str(&response.access_token)?),
             RefreshToken::from(Uuid::parse_str(&response.refresh_token)?),

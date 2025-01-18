@@ -1,7 +1,7 @@
+use chrono::Duration;
 use enigma_auth::{AccessToken, PasswordHash, RefreshToken, UserId, UserName};
 use std::error::Error;
 use std::net::IpAddr;
-use chrono::Duration;
 use time::OffsetDateTime;
 use tonic::async_trait;
 
@@ -25,8 +25,13 @@ pub trait AuthDatabase: Send + Sync {
 
     async fn list_accounts(&self) -> Result<Vec<(UserId, UserName)>, Box<dyn Error>>;
 
-    async fn create_session(&self, user_id: &UserId, access_ttl: Duration, refresh_ttl: Duration, remote_ip: Option<IpAddr>)
-                            -> Result<(AccessToken, RefreshToken), Box<dyn Error>>;
+    async fn create_session(
+        &self,
+        user_id: &UserId,
+        access_ttl: Duration,
+        refresh_ttl: Duration,
+        remote_ip: Option<IpAddr>,
+    ) -> Result<(AccessToken, RefreshToken), Box<dyn Error>>;
 
     async fn session(
         &self,

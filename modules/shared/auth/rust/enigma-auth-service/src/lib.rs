@@ -32,7 +32,12 @@ pub trait EnigmaAuthService: Send + Sync {
         x: &Option<IpAddr>,
     ) -> Result<(AccessToken, RefreshToken), Box<dyn Error>>;
 
-    async fn login(&self, username: &str, password: &str, remote_ip: Option<IpAddr>) -> Result<(AccessToken, RefreshToken), Box<dyn Error>>;
+    async fn login(
+        &self,
+        username: &str,
+        password: &str,
+        remote_ip: Option<IpAddr>,
+    ) -> Result<(AccessToken, RefreshToken), Box<dyn Error>>;
 
     async fn list_accounts(&self) -> Result<Vec<(i64, String)>, Box<dyn Error>>;
 
@@ -93,13 +98,23 @@ impl<T: AuthDatabase> EnigmaAuthService for DefaultAuthService<T> {
     ) -> Result<(AccessToken, RefreshToken), Box<dyn Error>> {
         let (access_token, refresh_token) = self
             .db
-            .refresh_session(&refresh_token, Duration::minutes(1), Duration::days(28), remote_ip)
+            .refresh_session(
+                &refresh_token,
+                Duration::minutes(1),
+                Duration::days(28),
+                remote_ip,
+            )
             .await?;
-        
+
         Ok((access_token, refresh_token))
     }
 
-    async fn login(&self, username: &str, password: &str, remote_ip: Option<IpAddr>) -> Result<(AccessToken, RefreshToken), Box<dyn Error>> {
+    async fn login(
+        &self,
+        username: &str,
+        password: &str,
+        remote_ip: Option<IpAddr>,
+    ) -> Result<(AccessToken, RefreshToken), Box<dyn Error>> {
         let user_id = self.db.user_id(&username.into()).await?;
 
         let hash = self.db.hash(&user_id).await?;
@@ -107,7 +122,12 @@ impl<T: AuthDatabase> EnigmaAuthService for DefaultAuthService<T> {
         if verify_password(&hash, password).unwrap_or(false) {
             Ok(self
                 .db
-                .create_session(&user_id, Duration::seconds(60), Duration::weeks(4), remote_ip)
+                .create_session(
+                    &user_id,
+                    Duration::seconds(60),
+                    Duration::weeks(4),
+                    remote_ip,
+                )
                 .await?)
         } else {
             Err("Invalid password".into())

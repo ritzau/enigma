@@ -1,9 +1,9 @@
-use std::error::Error;
 use clap::{Parser, Subcommand};
-use tracing::instrument;
-use tracing_subscriber::fmt::format::FmtSpan;
 use enigma_auth::EnigmaAuthClient;
 use enigma_auth_client::grpc::GrpcAuthClient;
+use std::error::Error;
+use tracing::instrument;
+use tracing_subscriber::fmt::format::FmtSpan;
 use uuid::Uuid;
 
 #[derive(Parser)]
@@ -21,13 +21,29 @@ enum Commands {
 
 #[derive(Debug, Subcommand)]
 enum AuthCommands {
-    Create { username: String, password: String },
-    Delete { user_id: i64 },
-    ChangePassword { user_id: i64, old_password: String, new_password: String },
-    GetSession { access_token: String },
-    RefreshSession { refresh_token: String },
+    Create {
+        username: String,
+        password: String,
+    },
+    Delete {
+        user_id: i64,
+    },
+    ChangePassword {
+        user_id: i64,
+        old_password: String,
+        new_password: String,
+    },
+    GetSession {
+        access_token: String,
+    },
+    RefreshSession {
+        refresh_token: String,
+    },
     List,
-    Login { username: String, password: String },
+    Login {
+        username: String,
+        password: String,
+    },
     PurgeSessions,
     Samples,
 }
@@ -59,9 +75,15 @@ async fn run_command(cli: Cli) -> Result<(), Box<dyn Error>> {
                 let response = client.delete_account(&user_id.into()).await?;
                 println!("RESPONSE={:?}", response);
             }
-            AuthCommands::ChangePassword { user_id, old_password, new_password } => {
+            AuthCommands::ChangePassword {
+                user_id,
+                old_password,
+                new_password,
+            } => {
                 let mut client = GrpcAuthClient::default().await?;
-                let response = client.change_password(user_id, &old_password, &new_password).await?;
+                let response = client
+                    .change_password(user_id, &old_password, &new_password)
+                    .await?;
                 println!("RESPONSE={:?}", response);
             }
             AuthCommands::GetSession { access_token } => {
@@ -71,7 +93,9 @@ async fn run_command(cli: Cli) -> Result<(), Box<dyn Error>> {
             }
             AuthCommands::RefreshSession { refresh_token } => {
                 let mut client = GrpcAuthClient::default().await?;
-                let response = client.refresh_session(&Uuid::parse_str(&refresh_token)?).await?;
+                let response = client
+                    .refresh_session(&Uuid::parse_str(&refresh_token)?)
+                    .await?;
                 println!("RESPONSE={:?}", response);
             }
             AuthCommands::List => {
