@@ -134,6 +134,31 @@ impl Display for AccessToken {
     }
 }
 
+/// Represents a refresh token.
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub struct RefreshToken(Uuid);
+
+impl From<Uuid> for RefreshToken {
+    /// Converts a `Uuid` to an `AccessToken`.
+    fn from(value: Uuid) -> Self {
+        RefreshToken(value)
+    }
+}
+
+impl RefreshToken {
+    /// Returns the refresh token as a `Uuid`.
+    pub fn value(&self) -> Uuid {
+        self.0
+    }
+}
+
+impl Display for RefreshToken {
+    /// Formats the refresh token.
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 /// The `EnigmaAuthClient` trait provides asynchronous methods for creating accounts, deleting accounts,
 /// retrieving session information, listing accounts, logging in, and purging expired sessions.
 #[async_trait]
@@ -181,6 +206,20 @@ pub trait EnigmaAuthClient {
         new_password: &str,
     ) -> Result<(), Box<dyn std::error::Error>>;
 
+    /// Asynchronously refreshes a session.
+    ///
+    /// # Parameters
+    /// - `refresh_token: &Uuid`: The refresh token for the session.
+    ///
+    /// # Returns
+    /// - `Result<(AccessToken, RefreshToken), Box<dyn std::error::Error>>`: The function returns a `Result` type.
+    ///   On success, it returns a tuple containing the new `AccessToken` and `RefreshToken`.
+    ///   On failure, it returns a boxed dynamic error.
+    async fn refresh_session(
+        &mut self,
+        refresh_token: &Uuid,
+    ) -> Result<(AccessToken, RefreshToken), Box<dyn std::error::Error>>;
+
     /// Asynchronously retrieves session information.
     ///
     /// # Parameters
@@ -217,7 +256,7 @@ pub trait EnigmaAuthClient {
         &mut self,
         username: &str,
         password: &str,
-    ) -> Result<String, Box<dyn std::error::Error>>;
+    ) -> Result<(AccessToken, RefreshToken), Box<dyn std::error::Error>>;
 
     /// Asynchronously purges expired sessions.
     ///

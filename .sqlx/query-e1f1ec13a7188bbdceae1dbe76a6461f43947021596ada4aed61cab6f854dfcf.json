@@ -1,11 +1,11 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO users (username, hash) VALUES ($1, $2) RETURNING id",
+  "query": "INSERT INTO accounts (username, hash) VALUES ($1, $2) RETURNING user_id",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
-        "name": "id",
+        "name": "user_id",
         "type_info": "Int8"
       }
     ],
@@ -19,5 +19,5 @@
       false
     ]
   },
-  "hash": "de0577dcadbffa9a58653dd014655b40e8a6a0cebb4e7608b2047de822743ceb"
+  "hash": "e1f1ec13a7188bbdceae1dbe76a6461f43947021596ada4aed61cab6f854dfcf"
 }

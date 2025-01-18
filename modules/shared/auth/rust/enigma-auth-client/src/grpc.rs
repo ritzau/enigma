@@ -1,6 +1,11 @@
-use enigma_auth::{EnigmaAuthClient, UserId};
-use enigma_auth_grpc::{auth_client::AuthClient, ChangePasswordRequest, CreateAccountRequest, DeleteAccountRequest, GetSessionRequest, ListAccountsRequest, LoginRequest, PurgeExpiredSessionsRequest};
+use enigma_auth::{AccessToken, EnigmaAuthClient, RefreshToken, UserId};
+use enigma_auth_grpc::{
+    auth_client::AuthClient, ChangePasswordRequest, CreateAccountRequest, DeleteAccountRequest,
+    GetSessionRequest, ListAccountsRequest, LoginRequest, PurgeExpiredSessionsRequest,
+    RefreshSessionRequest,
+};
 use std::convert::Into;
+use std::error::Error;
 use tonic::async_trait;
 use tonic::transport::Channel;
 use tracing::instrument;
@@ -16,12 +21,12 @@ impl GrpcAuthClient {
     }
 
     #[instrument(err)]
-    pub async fn connect(url: &str) -> Result<Self, Box<dyn std::error::Error>> {
+    pub async fn connect(url: &str) -> Result<Self, Box<dyn Error>> {
         let client = AuthClient::connect(String::from(url)).await?;
         Ok(Self::new(client))
     }
 
-    pub async fn default() -> Result<Self, Box<dyn std::error::Error>> {
+    pub async fn default() -> Result<Self, Box<dyn Error>> {
         Ok(Self::connect("http://[::1]:50051").await?)
     }
 }
@@ -33,7 +38,7 @@ impl EnigmaAuthClient for GrpcAuthClient {
         &mut self,
         username: &str,
         password: &str,
-    ) -> Result<UserId, Box<dyn std::error::Error>> {
+    ) -> Result<UserId, Box<dyn Error>> {
         let request = tonic::Request::new(CreateAccountRequest {
             username: username.into(),
             password: password.into(),
@@ -45,7 +50,7 @@ impl EnigmaAuthClient for GrpcAuthClient {
     }
 
     #[instrument(skip(self), err)]
-    async fn delete_account(&mut self, user_id: &UserId) -> Result<(), Box<dyn std::error::Error>> {
+    async fn delete_account(&mut self, user_id: &UserId) -> Result<(), Box<dyn Error>> {
         let request = tonic::Request::new(DeleteAccountRequest {
             user_id: user_id.value(),
         });
@@ -61,9 +66,9 @@ impl EnigmaAuthClient for GrpcAuthClient {
         user_id: i64,
         old_password: &str,
         new_password: &str,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<(), Box<dyn Error>> {
         let request = tonic::Request::new(ChangePasswordRequest {
-            user_id: user_id,
+            user_id,
             old_password: old_password.into(),
             new_password: new_password.into(),
         });
@@ -71,11 +76,23 @@ impl EnigmaAuthClient for GrpcAuthClient {
         Ok(())
     }
 
-    #[instrument(skip(self), err)]
-    async fn get_session(
+    async fn refresh_session(
         &mut self,
-        access_token: &Uuid,
-    ) -> Result<UserId, Box<dyn std::error::Error>> {
+        refresh_token: &Uuid,
+    ) -> Result<(AccessToken, RefreshToken), Box<dyn Error>> {
+        let request = tonic::Request::new(RefreshSessionRequest {
+            refresh_token: refresh_token.to_string(),
+        });
+        let response = self.client.refresh_session(request).await?;
+        let response = response.get_ref();
+        Ok((
+            AccessToken::from(Uuid::parse_str(&response.access_token)?),
+            RefreshToken::from(Uuid::parse_str(&response.refresh_token)?),
+        ))
+    }
+
+    #[instrument(skip(self), err)]
+    async fn get_session(&mut self, access_token: &Uuid) -> Result<UserId, Box<dyn Error>> {
         let request = tonic::Request::new(GetSessionRequest {
             access_token: access_token.to_string(),
         });
@@ -86,7 +103,7 @@ impl EnigmaAuthClient for GrpcAuthClient {
     }
 
     #[instrument(skip(self), err)]
-    async fn list_accounts(&mut self) -> Result<Vec<(UserId, String)>, Box<dyn std::error::Error>> {
+    async fn list_accounts(&mut self) -> Result<Vec<(UserId, String)>, Box<dyn Error>> {
         let request = tonic::Request::new(ListAccountsRequest {});
         let response = self.client.list_accounts(request).await?;
 
@@ -104,19 +121,22 @@ impl EnigmaAuthClient for GrpcAuthClient {
         &mut self,
         username: &str,
         password: &str,
-    ) -> Result<String, Box<dyn std::error::Error>> {
+    ) -> Result<(AccessToken, RefreshToken), Box<dyn Error>> {
         let request = tonic::Request::new(LoginRequest {
             name: username.into(),
             password: password.into(),
         });
 
-        let response = self.client.login(request).await?;
-
-        Ok(response.get_ref().access_token.clone())
+        let response = self.client.login(request).await?.into_inner();
+        
+        Ok((
+            AccessToken::from(Uuid::parse_str(&response.access_token)?),
+            RefreshToken::from(Uuid::parse_str(&response.refresh_token)?),
+        ))
     }
 
     #[instrument(skip(self), err)]
-    async fn purge_expired_sessions(&mut self) -> Result<u64, Box<dyn std::error::Error>> {
+    async fn purge_expired_sessions(&mut self) -> Result<u64, Box<dyn Error>> {
         let request = tonic::Request::new(PurgeExpiredSessionsRequest {});
         let response = self.client.purge_expired_sessions(request).await?;
         Ok(response.get_ref().purged_session_count)

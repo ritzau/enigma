@@ -1,10 +1,11 @@
 use argon2::password_hash::rand_core::OsRng;
 use argon2::password_hash::SaltString;
 use argon2::{password_hash, Argon2, PasswordHasher, PasswordVerifier};
+use chrono::Duration;
 use db::AuthDatabase;
-use enigma_auth::{AccessToken, PasswordHash, UserId};
-use sqlx::types::Uuid;
+use enigma_auth::{AccessToken, PasswordHash, RefreshToken, UserId};
 use std::error::Error;
+use std::net::IpAddr;
 use tonic::async_trait;
 
 pub mod db;
@@ -25,7 +26,13 @@ pub trait EnigmaAuthService: Send + Sync {
         new_password: &str,
     ) -> Result<(), Box<dyn Error>>;
 
-    async fn login(&self, username: &str, password: &str) -> Result<Uuid, Box<dyn Error>>;
+    async fn refresh_session(
+        &self,
+        refresh_token: &RefreshToken,
+        x: &Option<IpAddr>,
+    ) -> Result<(AccessToken, RefreshToken), Box<dyn Error>>;
+
+    async fn login(&self, username: &str, password: &str, remote_ip: Option<IpAddr>) -> Result<(AccessToken, RefreshToken), Box<dyn Error>>;
 
     async fn list_accounts(&self) -> Result<Vec<(i64, String)>, Box<dyn Error>>;
 
@@ -61,11 +68,17 @@ impl<T: AuthDatabase> EnigmaAuthService for DefaultAuthService<T> {
         self.db.delete_user(user_id).await
     }
 
-    async fn change_password(&self, user_id: &UserId, old_password: &str, new_password: &str) -> Result<(), Box<dyn Error>> {
+    async fn change_password(
+        &self,
+        user_id: &UserId,
+        old_password: &str,
+        new_password: &str,
+    ) -> Result<(), Box<dyn Error>> {
         let password_hash = self.db.hash(user_id).await?;
 
         if verify_password(&password_hash, old_password).unwrap_or(false) {
-            let new_hash = hash(new_password).map_err(|e| format!("Failed to hash password: {}", e))?;
+            let new_hash =
+                hash(new_password).map_err(|e| format!("Failed to hash password: {}", e))?;
             self.db.set_hash(&user_id, &new_hash).await?;
             Ok(())
         } else {
@@ -73,7 +86,20 @@ impl<T: AuthDatabase> EnigmaAuthService for DefaultAuthService<T> {
         }
     }
 
-    async fn login(&self, username: &str, password: &str) -> Result<Uuid, Box<dyn Error>> {
+    async fn refresh_session(
+        &self,
+        refresh_token: &RefreshToken,
+        remote_ip: &Option<IpAddr>,
+    ) -> Result<(AccessToken, RefreshToken), Box<dyn Error>> {
+        let (access_token, refresh_token) = self
+            .db
+            .refresh_session(&refresh_token, Duration::minutes(1), Duration::days(28), remote_ip)
+            .await?;
+        
+        Ok((access_token, refresh_token))
+    }
+
+    async fn login(&self, username: &str, password: &str, remote_ip: Option<IpAddr>) -> Result<(AccessToken, RefreshToken), Box<dyn Error>> {
         let user_id = self.db.user_id(&username.into()).await?;
 
         let hash = self.db.hash(&user_id).await?;
@@ -81,7 +107,7 @@ impl<T: AuthDatabase> EnigmaAuthService for DefaultAuthService<T> {
         if verify_password(&hash, password).unwrap_or(false) {
             Ok(self
                 .db
-                .create_session(&user_id, std::time::Duration::from_secs(60))
+                .create_session(&user_id, Duration::seconds(60), Duration::weeks(4), remote_ip)
                 .await?)
         } else {
             Err("Invalid password".into())

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT user_id, expires_at FROM sessions WHERE session_id = $1",
+  "query": "SELECT user_id, username FROM accounts",
   "describe": {
     "columns": [
       {
@@ -10,19 +10,17 @@
       },
       {
         "ordinal": 1,
-        "name": "expires_at",
-        "type_info": "Timestamptz"
+        "name": "username",
+        "type_info": "Text"
       }
     ],
     "parameters": {
-      "Left": [
-        "Uuid"
-      ]
+      "Left": []
     },
     "nullable": [
       false,
       false
     ]
   },
-  "hash": "48bd7aab26ea68ebbce8f4a22a329f9ded2139e52ec2d627d3a0367bc356f453"
+  "hash": "a9f7bbb585487e8d3eef4c3f676861bc6339d56ad3bd765420ff83f1c01e9a64"
 }

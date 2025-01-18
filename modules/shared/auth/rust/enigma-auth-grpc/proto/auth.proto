@@ -6,8 +6,9 @@ service Auth {
     rpc CreateAccount (CreateAccountRequest) returns (CreateAccountReply) {}
     rpc DeleteAccount (DeleteAccountRequest) returns (DeleteAccountReply) {}
     rpc ChangePassword (ChangePasswordRequest) returns (ChangePasswordReply) {}
-    rpc ListAccounts (ListAccountsRequest) returns (ListAccountsReply) {}
+    rpc RefreshSession (RefreshSessionRequest) returns (RefreshSessionReply) {}
     rpc Login (LoginRequest) returns (LoginReply) {}
+    rpc ListAccounts (ListAccountsRequest) returns (ListAccountsReply) {}
     rpc GetSession (GetSessionRequest) returns (GetSessionReply) {}
     rpc PurgeExpiredSessions (PurgeExpiredSessionsRequest) returns (PurgeExpiredSessionsReply) {}
 }
@@ -37,6 +38,25 @@ message ChangePasswordRequest {
 message ChangePasswordReply {
 }
 
+message RefreshSessionRequest {
+    string refresh_token = 1;
+}
+
+message RefreshSessionReply {
+    string access_token = 1;
+    string refresh_token = 2;
+}
+
+message LoginRequest {
+    string name = 1;
+    string password = 2;
+}
+
+message LoginReply {
+    string access_token = 1;
+    string refresh_token = 2;
+}
+
 message ListAccountsRequest {
 }
 
@@ -47,15 +67,6 @@ message ListAccountsReply {
 message User {
     int64 id = 1;
     string name = 2;
-}
-
-message LoginRequest {
-    string name = 1;
-    string password = 2;
-}
-
-message LoginReply {
-    string access_token = 1;
 }
 
 message GetSessionRequest {

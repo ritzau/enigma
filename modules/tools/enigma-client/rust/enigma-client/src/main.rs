@@ -1,4 +1,6 @@
+use std::error::Error;
 use clap::{Parser, Subcommand};
+use tracing::instrument;
 use tracing_subscriber::fmt::format::FmtSpan;
 use enigma_auth::EnigmaAuthClient;
 use enigma_auth_client::grpc::GrpcAuthClient;
@@ -11,18 +13,19 @@ struct Cli {
     command: Commands,
 }
 
-#[derive(Subcommand)]
+#[derive(Debug, Subcommand)]
 enum Commands {
     #[command(subcommand)]
     Auth(AuthCommands),
 }
 
-#[derive(Subcommand)]
+#[derive(Debug, Subcommand)]
 enum AuthCommands {
     Create { username: String, password: String },
     Delete { user_id: i64 },
     ChangePassword { user_id: i64, old_password: String, new_password: String },
     GetSession { access_token: String },
+    RefreshSession { refresh_token: String },
     List,
     Login { username: String, password: String },
     PurgeSessions,
@@ -30,13 +33,20 @@ enum AuthCommands {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<(), Box<dyn Error>> {
     tracing_subscriber::fmt()
         .with_span_events(FmtSpan::NEW | FmtSpan::CLOSE)
         .init();
 
     let cli = Cli::parse();
 
+    run_command(cli).await?;
+
+    Ok(())
+}
+
+#[instrument(err, skip(cli))]
+async fn run_command(cli: Cli) -> Result<(), Box<dyn Error>> {
     match cli.command {
         Commands::Auth(command) => match command {
             AuthCommands::Create { username, password } => {
@@ -57,6 +67,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             AuthCommands::GetSession { access_token } => {
                 let mut client = GrpcAuthClient::default().await?;
                 let response = client.get_session(&Uuid::parse_str(&access_token)?).await?;
+                println!("RESPONSE={:?}", response);
+            }
+            AuthCommands::RefreshSession { refresh_token } => {
+                let mut client = GrpcAuthClient::default().await?;
+                let response = client.refresh_session(&Uuid::parse_str(&refresh_token)?).await?;
                 println!("RESPONSE={:?}", response);
             }
             AuthCommands::List => {
@@ -80,7 +95,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         },
     }
-
     Ok(())
 }
 

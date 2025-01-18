@@ -1,14 +1,15 @@
 use crate::EnigmaAuthService;
+use enigma_auth::{RefreshToken, UserId};
 use enigma_auth_grpc::{
     auth_server, ChangePasswordReply, ChangePasswordRequest, CreateAccountReply,
     CreateAccountRequest, DeleteAccountReply, DeleteAccountRequest, GetSessionReply,
     GetSessionRequest, ListAccountsReply, ListAccountsRequest, LoginReply, LoginRequest,
-    PurgeExpiredSessionsReply, PurgeExpiredSessionsRequest, User,
+    PurgeExpiredSessionsReply, PurgeExpiredSessionsRequest, RefreshSessionReply,
+    RefreshSessionRequest, User,
 };
 use sqlx::types::Uuid;
 use tonic::{Request, Response, Status};
 use tracing::instrument;
-use enigma_auth::UserId;
 
 pub struct GrpcAuthService<T: EnigmaAuthService> {
     auth_service: T,
@@ -91,6 +92,55 @@ impl<T: EnigmaAuthService + 'static> auth_server::Auth for GrpcAuthService<T> {
         Ok(Response::new(reply))
     }
 
+    #[instrument(err, skip(self, request), fields(caller = to_caller_string(&request)))]
+    async fn refresh_session(
+        &self,
+        request: Request<RefreshSessionRequest>,
+    ) -> Result<Response<RefreshSessionReply>, Status> {
+        let remote_ip = request.remote_addr().map(|addr| addr.ip());
+        let request = request.get_ref();
+
+        let refresh_token =
+            Uuid::parse_str(&request.refresh_token).map_err(|e| Status::internal(e.to_string()))?;
+        let refresh_token = RefreshToken::from(refresh_token);
+
+        let (access_token, refresh_token) = self
+            .auth_service
+            .refresh_session(&refresh_token, &remote_ip)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        let reply = RefreshSessionReply {
+            access_token: access_token.to_string(),
+            refresh_token: refresh_token.to_string(),
+        };
+
+        Ok(Response::new(reply))
+    }
+
+    #[instrument(
+        err,
+        skip(self, request),
+        fields(
+            caller = to_caller_string(&request),
+            username = request.get_ref().name))]
+    async fn login(&self, request: Request<LoginRequest>) -> Result<Response<LoginReply>, Status> {
+        let remote_ip = request.remote_addr().map(|addr| addr.ip());
+        let request = request.get_ref();
+        let (access_token, refresh_token) = self
+            .auth_service
+            .login(&request.name, &request.password, remote_ip)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        let reply = LoginReply {
+            access_token: access_token.to_string(),
+            refresh_token: refresh_token.to_string(),
+        };
+
+        Ok(Response::new(reply))
+    }
+
     #[instrument(err, skip(self, _request), fields(caller = to_caller_string(&_request)))]
     async fn list_accounts(
         &self,
@@ -108,27 +158,6 @@ impl<T: EnigmaAuthService + 'static> auth_server::Auth for GrpcAuthService<T> {
             }
             Err(e) => Err(Status::internal(e.to_string())),
         }
-    }
-
-    #[instrument(
-        err,
-        skip(self, request),
-        fields(
-            caller = to_caller_string(&request),
-            username = request.get_ref().name))]
-    async fn login(&self, request: Request<LoginRequest>) -> Result<Response<LoginReply>, Status> {
-        let request = request.get_ref();
-        let session_id = self
-            .auth_service
-            .login(&request.name, &request.password)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
-
-        let reply = LoginReply {
-            access_token: session_id.to_string(),
-        };
-
-        Ok(Response::new(reply))
     }
 
     #[instrument(

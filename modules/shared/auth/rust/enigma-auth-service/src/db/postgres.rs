@@ -1,11 +1,11 @@
 use crate::db::AuthDatabase;
+use chrono::Duration;
 use chrono::Utc;
-use enigma_auth::{AccessToken, PasswordHash, UserId, UserName};
-use sqlx::types::Uuid;
+use enigma_auth::{AccessToken, PasswordHash, RefreshToken, UserId, UserName};
 use sqlx::{Pool, Postgres};
 use std::env;
 use std::error::Error;
-use std::time::Duration;
+use std::net::IpAddr;
 use time::format_description::well_known::Rfc3339;
 use time::OffsetDateTime;
 use tonic::async_trait;
@@ -22,38 +22,36 @@ impl PostgresAuthDatabase {
         let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
         let pool = Pool::<Postgres>::connect(&database_url).await?;
 
-        sqlx::query(
-            "\
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
-",
-        )
-        .execute(&pool)
-        .await?;
+        let sql = [
+            "CREATE EXTENSION IF NOT EXISTS pgcrypto;",
+            "CREATE TABLE IF NOT EXISTS accounts (
+                user_id BIGSERIAL PRIMARY KEY,
+                username TEXT UNIQUE NOT NULL,
+                hash TEXT NOT NULL
+            );
+            ",
+            "CREATE INDEX IF NOT EXISTS idx_username ON accounts(username);",
+            "CREATE TABLE IF NOT EXISTS sessions (
+                session_id BIGSERIAL PRIMARY KEY,
+                user_id BIGINT NOT NULL,
+                access_token UUID NOT NULL DEFAULT gen_random_uuid(),
+                refresh_token UUID NOT NULL DEFAULT gen_random_uuid(),
+                access_token_expiry TIMESTAMPTZ NOT NULL,
+                refresh_token_expiry TIMESTAMPTZ NOT NULL,
+                ip_address VARCHAR(39),
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT fk_user_id FOREIGN KEY (user_id) REFERENCES accounts(user_id)
+            );
+            ",
+            "CREATE INDEX IF NOT EXISTS idx_user_id ON sessions(user_id);",
+            "CREATE INDEX IF NOT EXISTS idx_access_token ON sessions(access_token);",
+            "CREATE INDEX IF NOT EXISTS idx_refresh_token ON sessions(refresh_token);",
+        ];
 
-        sqlx::query(
-            "\
-CREATE TABLE IF NOT EXISTS users (
-    id BIGSERIAL PRIMARY KEY,
-    username TEXT UNIQUE NOT NULL,
-    hash TEXT NOT NULL
-);
-",
-        )
-        .execute(&pool)
-        .await?;
-
-        sqlx::query(
-            "\
-CREATE TABLE IF NOT EXISTS sessions (
-  session_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id    BIGINT NOT NULL,
-  expires_at timestamptz NOT NULL,
-  role       text
-);
-",
-        )
-        .execute(&pool)
-        .await?;
+        for s in sql {
+            sqlx::query(s).execute(&pool).await?;
+        }
 
         Ok(Self { pool })
     }
@@ -68,7 +66,7 @@ impl AuthDatabase for PostgresAuthDatabase {
         hash: &PasswordHash,
     ) -> Result<UserId, Box<dyn Error>> {
         let id = sqlx::query_scalar!(
-            "INSERT INTO users (username, hash) VALUES ($1, $2) RETURNING id",
+            "INSERT INTO accounts (username, hash) VALUES ($1, $2) RETURNING user_id",
             username.as_str(),
             hash.as_str(),
         )
@@ -81,18 +79,18 @@ impl AuthDatabase for PostgresAuthDatabase {
     #[instrument(skip_all, err, fields(%username))]
     async fn user_id(&self, username: &UserName) -> Result<UserId, Box<dyn Error>> {
         let row = sqlx::query!(
-            "SELECT id FROM users WHERE username = $1",
+            "SELECT user_id FROM accounts WHERE username = $1",
             username.as_str()
         )
         .fetch_one(&self.pool)
         .await?;
 
-        Ok(row.id.into())
+        Ok(row.user_id.into())
     }
 
     #[instrument(skip_all, err, fields(%user_id))]
     async fn delete_user(&self, user_id: &UserId) -> Result<(), Box<dyn Error>> {
-        sqlx::query!("DELETE FROM users WHERE id = $1", user_id.value())
+        sqlx::query!("DELETE FROM accounts WHERE user_id = $1", user_id.value())
             .execute(&self.pool)
             .await?;
 
@@ -102,7 +100,7 @@ impl AuthDatabase for PostgresAuthDatabase {
     #[instrument(skip_all, err, fields(%user_id))]
     async fn set_hash(&self, user_id: &UserId, hash: &PasswordHash) -> Result<(), Box<dyn Error>> {
         sqlx::query!(
-            "UPDATE users SET hash = $1 WHERE id = $2",
+            "UPDATE accounts SET hash = $1 WHERE user_id = $2",
             hash.as_str(),
             user_id.value()
         )
@@ -114,7 +112,7 @@ impl AuthDatabase for PostgresAuthDatabase {
 
     #[instrument(skip_all, err, fields(%user_id))]
     async fn hash(&self, user_id: &UserId) -> Result<PasswordHash, Box<dyn Error>> {
-        let row = sqlx::query!("SELECT hash FROM users WHERE id = $1", user_id.value())
+        let row = sqlx::query!("SELECT hash FROM accounts WHERE user_id = $1", user_id.value())
             .fetch_one(&self.pool)
             .await?;
 
@@ -123,13 +121,13 @@ impl AuthDatabase for PostgresAuthDatabase {
 
     #[instrument(skip_all, err)]
     async fn list_accounts(&self) -> Result<Vec<(UserId, UserName)>, Box<dyn Error>> {
-        let rows = sqlx::query!("SELECT id, username FROM users")
+        let rows = sqlx::query!("SELECT user_id, username FROM accounts")
             .fetch_all(&self.pool)
             .await?;
 
         let users = rows
             .into_iter()
-            .map(|row| (UserId::from(row.id), UserName::from(row.username)))
+            .map(|row| (UserId::from(row.user_id), UserName::from(row.username)))
             .collect();
 
         Ok(users)
@@ -139,19 +137,38 @@ impl AuthDatabase for PostgresAuthDatabase {
     async fn create_session(
         &self,
         user_id: &UserId,
-        ttl: Duration,
-    ) -> Result<Uuid, Box<dyn Error>> {
-        let expires_at = Utc::now() + ttl;
-        let expires_at = OffsetDateTime::parse(&expires_at.to_rfc3339(), &Rfc3339)?;
-        let session_id = sqlx::query_scalar!(
-            "INSERT INTO sessions (user_id, expires_at) VALUES ($1, $2) RETURNING session_id",
+        access_ttl: Duration,
+        refresh_ttl: Duration,
+        remote_ip: Option<IpAddr>,
+    ) -> Result<(AccessToken, RefreshToken), Box<dyn Error>> {
+        let now = Utc::now();
+        let access_token_expiry =
+            OffsetDateTime::parse(&(now + access_ttl).to_rfc3339(), &Rfc3339)?;
+        let refresh_token_expiry =
+            OffsetDateTime::parse(&(now + refresh_ttl).to_rfc3339(), &Rfc3339)?;
+
+        let record = sqlx::query!(
+            "\
+            INSERT INTO sessions (
+                user_id,
+                access_token_expiry,
+                refresh_token_expiry,
+                ip_address
+            ) VALUES ($1, $2, $3, $4)
+            RETURNING access_token, refresh_token;
+            ",
             user_id.value(),
-            expires_at,
+            access_token_expiry,
+            refresh_token_expiry,
+            remote_ip.map_or(String::default(), |ip| ip.to_string())
         )
         .fetch_one(&self.pool)
         .await?;
 
-        Ok(session_id)
+        Ok((
+            AccessToken::from(record.access_token),
+            RefreshToken::from(record.refresh_token),
+        ))
     }
 
     #[instrument(skip_all, err, fields(%access_token))]
@@ -160,18 +177,58 @@ impl AuthDatabase for PostgresAuthDatabase {
         access_token: &AccessToken,
     ) -> Result<(UserId, OffsetDateTime), Box<dyn Error>> {
         let row = sqlx::query!(
-            "SELECT user_id, expires_at FROM sessions WHERE session_id = $1",
+            "SELECT user_id, access_token_expiry FROM sessions WHERE access_token = $1 AND access_token_expiry > NOW()",
             access_token.value()
         )
         .fetch_one(&self.pool)
         .await?;
 
-        Ok((UserId::from(row.user_id), row.expires_at))
+        Ok((UserId::from(row.user_id), row.access_token_expiry))
+    }
+
+    #[instrument(skip_all, err)]
+    async fn refresh_session(
+        &self,
+        refresh_token: &RefreshToken,
+        access_ttl: Duration,
+        refresh_ttl: Duration,
+        remote_ip: &Option<IpAddr>,
+    ) -> Result<(AccessToken, RefreshToken), Box<dyn Error>> {
+        let now = Utc::now();
+        let refresh_token_expiry = now + refresh_ttl;
+        let refresh_token_expiry =
+            OffsetDateTime::parse(&refresh_token_expiry.to_rfc3339(), &Rfc3339)?;
+        let access_token_expiry = now + access_ttl;
+        let access_token_expiry =
+            OffsetDateTime::parse(&access_token_expiry.to_rfc3339(), &Rfc3339)?;
+
+        let record = sqlx::query!(
+            "UPDATE sessions
+            SET access_token = gen_random_uuid(),
+                access_token_expiry = $2,
+                refresh_token = gen_random_uuid(),
+                refresh_token_expiry = $3,
+                ip_address = $4,
+                updated_at = NOW()
+            WHERE refresh_token = $1
+            RETURNING user_id, access_token, refresh_token",
+            refresh_token.value(),
+            access_token_expiry,
+            refresh_token_expiry,
+            remote_ip.map_or(String::default(), |ip| ip.to_string())
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok((
+            AccessToken::from(record.access_token),
+            RefreshToken::from(record.refresh_token),
+        ))
     }
 
     #[instrument(skip_all, err, fields(%now))]
     async fn purge_expired_sessions(&self, now: OffsetDateTime) -> Result<u64, Box<dyn Error>> {
-        let result = sqlx::query!("DELETE FROM sessions WHERE expires_at < $1", now)
+        let result = sqlx::query!("DELETE FROM sessions WHERE refresh_token_expiry < $1", now)
             .execute(&self.pool)
             .await?;
 

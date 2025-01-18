@@ -31,15 +31,20 @@ internal protocol Auth_AuthClientProtocol: GRPCClient {
     callOptions: CallOptions?
   ) -> UnaryCall<Auth_ChangePasswordRequest, Auth_ChangePasswordReply>
 
-  func listAccounts(
-    _ request: Auth_ListAccountsRequest,
+  func refreshSession(
+    _ request: Auth_RefreshSessionRequest,
     callOptions: CallOptions?
-  ) -> UnaryCall<Auth_ListAccountsRequest, Auth_ListAccountsReply>
+  ) -> UnaryCall<Auth_RefreshSessionRequest, Auth_RefreshSessionReply>
 
   func login(
     _ request: Auth_LoginRequest,
     callOptions: CallOptions?
   ) -> UnaryCall<Auth_LoginRequest, Auth_LoginReply>
+
+  func listAccounts(
+    _ request: Auth_ListAccountsRequest,
+    callOptions: CallOptions?
+  ) -> UnaryCall<Auth_ListAccountsRequest, Auth_ListAccountsReply>
 
   func getSession(
     _ request: Auth_GetSessionRequest,
@@ -111,21 +116,21 @@ extension Auth_AuthClientProtocol {
     )
   }
 
-  /// Unary call to ListAccounts
+  /// Unary call to RefreshSession
   ///
   /// - Parameters:
-  ///   - request: Request to send to ListAccounts.
+  ///   - request: Request to send to RefreshSession.
   ///   - callOptions: Call options.
   /// - Returns: A `UnaryCall` with futures for the metadata, status and response.
-  internal func listAccounts(
-    _ request: Auth_ListAccountsRequest,
+  internal func refreshSession(
+    _ request: Auth_RefreshSessionRequest,
     callOptions: CallOptions? = nil
-  ) -> UnaryCall<Auth_ListAccountsRequest, Auth_ListAccountsReply> {
+  ) -> UnaryCall<Auth_RefreshSessionRequest, Auth_RefreshSessionReply> {
     return self.makeUnaryCall(
-      path: Auth_AuthClientMetadata.Methods.listAccounts.path,
+      path: Auth_AuthClientMetadata.Methods.refreshSession.path,
       request: request,
       callOptions: callOptions ?? self.defaultCallOptions,
-      interceptors: self.interceptors?.makeListAccountsInterceptors() ?? []
+      interceptors: self.interceptors?.makeRefreshSessionInterceptors() ?? []
     )
   }
 
@@ -144,6 +149,24 @@ extension Auth_AuthClientProtocol {
       request: request,
       callOptions: callOptions ?? self.defaultCallOptions,
       interceptors: self.interceptors?.makeLoginInterceptors() ?? []
+    )
+  }
+
+  /// Unary call to ListAccounts
+  ///
+  /// - Parameters:
+  ///   - request: Request to send to ListAccounts.
+  ///   - callOptions: Call options.
+  /// - Returns: A `UnaryCall` with futures for the metadata, status and response.
+  internal func listAccounts(
+    _ request: Auth_ListAccountsRequest,
+    callOptions: CallOptions? = nil
+  ) -> UnaryCall<Auth_ListAccountsRequest, Auth_ListAccountsReply> {
+    return self.makeUnaryCall(
+      path: Auth_AuthClientMetadata.Methods.listAccounts.path,
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeListAccountsInterceptors() ?? []
     )
   }
 
@@ -261,15 +284,20 @@ internal protocol Auth_AuthAsyncClientProtocol: GRPCClient {
     callOptions: CallOptions?
   ) -> GRPCAsyncUnaryCall<Auth_ChangePasswordRequest, Auth_ChangePasswordReply>
 
-  func makeListAccountsCall(
-    _ request: Auth_ListAccountsRequest,
+  func makeRefreshSessionCall(
+    _ request: Auth_RefreshSessionRequest,
     callOptions: CallOptions?
-  ) -> GRPCAsyncUnaryCall<Auth_ListAccountsRequest, Auth_ListAccountsReply>
+  ) -> GRPCAsyncUnaryCall<Auth_RefreshSessionRequest, Auth_RefreshSessionReply>
 
   func makeLoginCall(
     _ request: Auth_LoginRequest,
     callOptions: CallOptions?
   ) -> GRPCAsyncUnaryCall<Auth_LoginRequest, Auth_LoginReply>
+
+  func makeListAccountsCall(
+    _ request: Auth_ListAccountsRequest,
+    callOptions: CallOptions?
+  ) -> GRPCAsyncUnaryCall<Auth_ListAccountsRequest, Auth_ListAccountsReply>
 
   func makeGetSessionCall(
     _ request: Auth_GetSessionRequest,
@@ -328,15 +356,15 @@ extension Auth_AuthAsyncClientProtocol {
     )
   }
 
-  internal func makeListAccountsCall(
-    _ request: Auth_ListAccountsRequest,
+  internal func makeRefreshSessionCall(
+    _ request: Auth_RefreshSessionRequest,
     callOptions: CallOptions? = nil
-  ) -> GRPCAsyncUnaryCall<Auth_ListAccountsRequest, Auth_ListAccountsReply> {
+  ) -> GRPCAsyncUnaryCall<Auth_RefreshSessionRequest, Auth_RefreshSessionReply> {
     return self.makeAsyncUnaryCall(
-      path: Auth_AuthClientMetadata.Methods.listAccounts.path,
+      path: Auth_AuthClientMetadata.Methods.refreshSession.path,
       request: request,
       callOptions: callOptions ?? self.defaultCallOptions,
-      interceptors: self.interceptors?.makeListAccountsInterceptors() ?? []
+      interceptors: self.interceptors?.makeRefreshSessionInterceptors() ?? []
     )
   }
 
@@ -349,6 +377,18 @@ extension Auth_AuthAsyncClientProtocol {
       request: request,
       callOptions: callOptions ?? self.defaultCallOptions,
       interceptors: self.interceptors?.makeLoginInterceptors() ?? []
+    )
+  }
+
+  internal func makeListAccountsCall(
+    _ request: Auth_ListAccountsRequest,
+    callOptions: CallOptions? = nil
+  ) -> GRPCAsyncUnaryCall<Auth_ListAccountsRequest, Auth_ListAccountsReply> {
+    return self.makeAsyncUnaryCall(
+      path: Auth_AuthClientMetadata.Methods.listAccounts.path,
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeListAccountsInterceptors() ?? []
     )
   }
 
@@ -415,15 +455,15 @@ extension Auth_AuthAsyncClientProtocol {
     )
   }
 
-  internal func listAccounts(
-    _ request: Auth_ListAccountsRequest,
+  internal func refreshSession(
+    _ request: Auth_RefreshSessionRequest,
     callOptions: CallOptions? = nil
-  ) async throws -> Auth_ListAccountsReply {
+  ) async throws -> Auth_RefreshSessionReply {
     return try await self.performAsyncUnaryCall(
-      path: Auth_AuthClientMetadata.Methods.listAccounts.path,
+      path: Auth_AuthClientMetadata.Methods.refreshSession.path,
       request: request,
       callOptions: callOptions ?? self.defaultCallOptions,
-      interceptors: self.interceptors?.makeListAccountsInterceptors() ?? []
+      interceptors: self.interceptors?.makeRefreshSessionInterceptors() ?? []
     )
   }
 
@@ -436,6 +476,18 @@ extension Auth_AuthAsyncClientProtocol {
       request: request,
       callOptions: callOptions ?? self.defaultCallOptions,
       interceptors: self.interceptors?.makeLoginInterceptors() ?? []
+    )
+  }
+
+  internal func listAccounts(
+    _ request: Auth_ListAccountsRequest,
+    callOptions: CallOptions? = nil
+  ) async throws -> Auth_ListAccountsReply {
+    return try await self.performAsyncUnaryCall(
+      path: Auth_AuthClientMetadata.Methods.listAccounts.path,
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeListAccountsInterceptors() ?? []
     )
   }
 
@@ -492,11 +544,14 @@ internal protocol Auth_AuthClientInterceptorFactoryProtocol: Sendable {
   /// - Returns: Interceptors to use when invoking 'changePassword'.
   func makeChangePasswordInterceptors() -> [ClientInterceptor<Auth_ChangePasswordRequest, Auth_ChangePasswordReply>]
 
-  /// - Returns: Interceptors to use when invoking 'listAccounts'.
-  func makeListAccountsInterceptors() -> [ClientInterceptor<Auth_ListAccountsRequest, Auth_ListAccountsReply>]
+  /// - Returns: Interceptors to use when invoking 'refreshSession'.
+  func makeRefreshSessionInterceptors() -> [ClientInterceptor<Auth_RefreshSessionRequest, Auth_RefreshSessionReply>]
 
   /// - Returns: Interceptors to use when invoking 'login'.
   func makeLoginInterceptors() -> [ClientInterceptor<Auth_LoginRequest, Auth_LoginReply>]
+
+  /// - Returns: Interceptors to use when invoking 'listAccounts'.
+  func makeListAccountsInterceptors() -> [ClientInterceptor<Auth_ListAccountsRequest, Auth_ListAccountsReply>]
 
   /// - Returns: Interceptors to use when invoking 'getSession'.
   func makeGetSessionInterceptors() -> [ClientInterceptor<Auth_GetSessionRequest, Auth_GetSessionReply>]
@@ -513,8 +568,9 @@ internal enum Auth_AuthClientMetadata {
       Auth_AuthClientMetadata.Methods.createAccount,
       Auth_AuthClientMetadata.Methods.deleteAccount,
       Auth_AuthClientMetadata.Methods.changePassword,
-      Auth_AuthClientMetadata.Methods.listAccounts,
+      Auth_AuthClientMetadata.Methods.refreshSession,
       Auth_AuthClientMetadata.Methods.login,
+      Auth_AuthClientMetadata.Methods.listAccounts,
       Auth_AuthClientMetadata.Methods.getSession,
       Auth_AuthClientMetadata.Methods.purgeExpiredSessions,
     ]
@@ -539,15 +595,21 @@ internal enum Auth_AuthClientMetadata {
       type: GRPCCallType.unary
     )
 
-    internal static let listAccounts = GRPCMethodDescriptor(
-      name: "ListAccounts",
-      path: "/auth.Auth/ListAccounts",
+    internal static let refreshSession = GRPCMethodDescriptor(
+      name: "RefreshSession",
+      path: "/auth.Auth/RefreshSession",
       type: GRPCCallType.unary
     )
 
     internal static let login = GRPCMethodDescriptor(
       name: "Login",
       path: "/auth.Auth/Login",
+      type: GRPCCallType.unary
+    )
+
+    internal static let listAccounts = GRPCMethodDescriptor(
+      name: "ListAccounts",
+      path: "/auth.Auth/ListAccounts",
       type: GRPCCallType.unary
     )
 
@@ -575,9 +637,11 @@ internal protocol Auth_AuthProvider: CallHandlerProvider {
 
   func changePassword(request: Auth_ChangePasswordRequest, context: StatusOnlyCallContext) -> EventLoopFuture<Auth_ChangePasswordReply>
 
-  func listAccounts(request: Auth_ListAccountsRequest, context: StatusOnlyCallContext) -> EventLoopFuture<Auth_ListAccountsReply>
+  func refreshSession(request: Auth_RefreshSessionRequest, context: StatusOnlyCallContext) -> EventLoopFuture<Auth_RefreshSessionReply>
 
   func login(request: Auth_LoginRequest, context: StatusOnlyCallContext) -> EventLoopFuture<Auth_LoginReply>
+
+  func listAccounts(request: Auth_ListAccountsRequest, context: StatusOnlyCallContext) -> EventLoopFuture<Auth_ListAccountsReply>
 
   func getSession(request: Auth_GetSessionRequest, context: StatusOnlyCallContext) -> EventLoopFuture<Auth_GetSessionReply>
 
@@ -623,13 +687,13 @@ extension Auth_AuthProvider {
         userFunction: self.changePassword(request:context:)
       )
 
-    case "ListAccounts":
+    case "RefreshSession":
       return UnaryServerHandler(
         context: context,
-        requestDeserializer: ProtobufDeserializer<Auth_ListAccountsRequest>(),
-        responseSerializer: ProtobufSerializer<Auth_ListAccountsReply>(),
-        interceptors: self.interceptors?.makeListAccountsInterceptors() ?? [],
-        userFunction: self.listAccounts(request:context:)
+        requestDeserializer: ProtobufDeserializer<Auth_RefreshSessionRequest>(),
+        responseSerializer: ProtobufSerializer<Auth_RefreshSessionReply>(),
+        interceptors: self.interceptors?.makeRefreshSessionInterceptors() ?? [],
+        userFunction: self.refreshSession(request:context:)
       )
 
     case "Login":
@@ -639,6 +703,15 @@ extension Auth_AuthProvider {
         responseSerializer: ProtobufSerializer<Auth_LoginReply>(),
         interceptors: self.interceptors?.makeLoginInterceptors() ?? [],
         userFunction: self.login(request:context:)
+      )
+
+    case "ListAccounts":
+      return UnaryServerHandler(
+        context: context,
+        requestDeserializer: ProtobufDeserializer<Auth_ListAccountsRequest>(),
+        responseSerializer: ProtobufSerializer<Auth_ListAccountsReply>(),
+        interceptors: self.interceptors?.makeListAccountsInterceptors() ?? [],
+        userFunction: self.listAccounts(request:context:)
       )
 
     case "GetSession":
@@ -686,15 +759,20 @@ internal protocol Auth_AuthAsyncProvider: CallHandlerProvider, Sendable {
     context: GRPCAsyncServerCallContext
   ) async throws -> Auth_ChangePasswordReply
 
-  func listAccounts(
-    request: Auth_ListAccountsRequest,
+  func refreshSession(
+    request: Auth_RefreshSessionRequest,
     context: GRPCAsyncServerCallContext
-  ) async throws -> Auth_ListAccountsReply
+  ) async throws -> Auth_RefreshSessionReply
 
   func login(
     request: Auth_LoginRequest,
     context: GRPCAsyncServerCallContext
   ) async throws -> Auth_LoginReply
+
+  func listAccounts(
+    request: Auth_ListAccountsRequest,
+    context: GRPCAsyncServerCallContext
+  ) async throws -> Auth_ListAccountsReply
 
   func getSession(
     request: Auth_GetSessionRequest,
@@ -753,13 +831,13 @@ extension Auth_AuthAsyncProvider {
         wrapping: { try await self.changePassword(request: $0, context: $1) }
       )
 
-    case "ListAccounts":
+    case "RefreshSession":
       return GRPCAsyncServerHandler(
         context: context,
-        requestDeserializer: ProtobufDeserializer<Auth_ListAccountsRequest>(),
-        responseSerializer: ProtobufSerializer<Auth_ListAccountsReply>(),
-        interceptors: self.interceptors?.makeListAccountsInterceptors() ?? [],
-        wrapping: { try await self.listAccounts(request: $0, context: $1) }
+        requestDeserializer: ProtobufDeserializer<Auth_RefreshSessionRequest>(),
+        responseSerializer: ProtobufSerializer<Auth_RefreshSessionReply>(),
+        interceptors: self.interceptors?.makeRefreshSessionInterceptors() ?? [],
+        wrapping: { try await self.refreshSession(request: $0, context: $1) }
       )
 
     case "Login":
@@ -769,6 +847,15 @@ extension Auth_AuthAsyncProvider {
         responseSerializer: ProtobufSerializer<Auth_LoginReply>(),
         interceptors: self.interceptors?.makeLoginInterceptors() ?? [],
         wrapping: { try await self.login(request: $0, context: $1) }
+      )
+
+    case "ListAccounts":
+      return GRPCAsyncServerHandler(
+        context: context,
+        requestDeserializer: ProtobufDeserializer<Auth_ListAccountsRequest>(),
+        responseSerializer: ProtobufSerializer<Auth_ListAccountsReply>(),
+        interceptors: self.interceptors?.makeListAccountsInterceptors() ?? [],
+        wrapping: { try await self.listAccounts(request: $0, context: $1) }
       )
 
     case "GetSession":
@@ -809,13 +896,17 @@ internal protocol Auth_AuthServerInterceptorFactoryProtocol: Sendable {
   ///   Defaults to calling `self.makeInterceptors()`.
   func makeChangePasswordInterceptors() -> [ServerInterceptor<Auth_ChangePasswordRequest, Auth_ChangePasswordReply>]
 
-  /// - Returns: Interceptors to use when handling 'listAccounts'.
+  /// - Returns: Interceptors to use when handling 'refreshSession'.
   ///   Defaults to calling `self.makeInterceptors()`.
-  func makeListAccountsInterceptors() -> [ServerInterceptor<Auth_ListAccountsRequest, Auth_ListAccountsReply>]
+  func makeRefreshSessionInterceptors() -> [ServerInterceptor<Auth_RefreshSessionRequest, Auth_RefreshSessionReply>]
 
   /// - Returns: Interceptors to use when handling 'login'.
   ///   Defaults to calling `self.makeInterceptors()`.
   func makeLoginInterceptors() -> [ServerInterceptor<Auth_LoginRequest, Auth_LoginReply>]
+
+  /// - Returns: Interceptors to use when handling 'listAccounts'.
+  ///   Defaults to calling `self.makeInterceptors()`.
+  func makeListAccountsInterceptors() -> [ServerInterceptor<Auth_ListAccountsRequest, Auth_ListAccountsReply>]
 
   /// - Returns: Interceptors to use when handling 'getSession'.
   ///   Defaults to calling `self.makeInterceptors()`.
@@ -834,8 +925,9 @@ internal enum Auth_AuthServerMetadata {
       Auth_AuthServerMetadata.Methods.createAccount,
       Auth_AuthServerMetadata.Methods.deleteAccount,
       Auth_AuthServerMetadata.Methods.changePassword,
-      Auth_AuthServerMetadata.Methods.listAccounts,
+      Auth_AuthServerMetadata.Methods.refreshSession,
       Auth_AuthServerMetadata.Methods.login,
+      Auth_AuthServerMetadata.Methods.listAccounts,
       Auth_AuthServerMetadata.Methods.getSession,
       Auth_AuthServerMetadata.Methods.purgeExpiredSessions,
     ]
@@ -860,15 +952,21 @@ internal enum Auth_AuthServerMetadata {
       type: GRPCCallType.unary
     )
 
-    internal static let listAccounts = GRPCMethodDescriptor(
-      name: "ListAccounts",
-      path: "/auth.Auth/ListAccounts",
+    internal static let refreshSession = GRPCMethodDescriptor(
+      name: "RefreshSession",
+      path: "/auth.Auth/RefreshSession",
       type: GRPCCallType.unary
     )
 
     internal static let login = GRPCMethodDescriptor(
       name: "Login",
       path: "/auth.Auth/Login",
+      type: GRPCCallType.unary
+    )
+
+    internal static let listAccounts = GRPCMethodDescriptor(
+      name: "ListAccounts",
+      path: "/auth.Auth/ListAccounts",
       type: GRPCCallType.unary
     )
 

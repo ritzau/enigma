@@ -1,7 +1,7 @@
-use enigma_auth::{AccessToken, PasswordHash, UserId, UserName};
-use sqlx::types::Uuid;
+use enigma_auth::{AccessToken, PasswordHash, RefreshToken, UserId, UserName};
 use std::error::Error;
-use std::time::Duration;
+use std::net::IpAddr;
+use chrono::Duration;
 use time::OffsetDateTime;
 use tonic::async_trait;
 
@@ -14,16 +14,32 @@ pub trait AuthDatabase: Send + Sync {
         username: &UserName,
         hash: &PasswordHash,
     ) -> Result<UserId, Box<dyn Error>>;
+
     async fn user_id(&self, username: &UserName) -> Result<UserId, Box<dyn Error>>;
+
     async fn delete_user(&self, user_id: &UserId) -> Result<(), Box<dyn Error>>;
+
     async fn set_hash(&self, user_id: &UserId, hash: &PasswordHash) -> Result<(), Box<dyn Error>>;
+
     async fn hash(&self, user_id: &UserId) -> Result<PasswordHash, Box<dyn Error>>;
+
     async fn list_accounts(&self) -> Result<Vec<(UserId, UserName)>, Box<dyn Error>>;
-    async fn create_session(&self, user_id: &UserId, ttl: Duration)
-        -> Result<Uuid, Box<dyn Error>>;
+
+    async fn create_session(&self, user_id: &UserId, access_ttl: Duration, refresh_ttl: Duration, remote_ip: Option<IpAddr>)
+                            -> Result<(AccessToken, RefreshToken), Box<dyn Error>>;
+
     async fn session(
         &self,
         access_token: &AccessToken,
     ) -> Result<(UserId, OffsetDateTime), Box<dyn Error>>;
+
+    async fn refresh_session(
+        &self,
+        refresh_token: &RefreshToken,
+        access_ttl: Duration,
+        refresh_ttl: Duration,
+        remote_ip: &Option<IpAddr>,
+    ) -> Result<(AccessToken, RefreshToken), Box<dyn Error>>;
+
     async fn purge_expired_sessions(&self, now: OffsetDateTime) -> Result<u64, Box<dyn Error>>;
 }

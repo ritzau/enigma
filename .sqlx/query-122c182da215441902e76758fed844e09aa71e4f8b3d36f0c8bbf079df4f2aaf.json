@@ -1,11 +1,11 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id FROM users WHERE username = $1",
+  "query": "SELECT user_id FROM accounts WHERE username = $1",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
-        "name": "id",
+        "name": "user_id",
         "type_info": "Int8"
       }
     ],
@@ -18,5 +18,5 @@
       false
     ]
   },
-  "hash": "dd99e48b1572e25db38f03da95984fda1072913b29bb6b3753a0d351583dfff6"
+  "hash": "122c182da215441902e76758fed844e09aa71e4f8b3d36f0c8bbf079df4f2aaf"
 }
