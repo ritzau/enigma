@@ -2,4 +2,9 @@
 resolver = "2"
 members = [
     "modules/shared/auth/rust/*",
+    "modules/tools/enigma-client/rust/*",
+]
+
+default-members = [
+    "modules/tools/enigma-client/rust/enigma-client",
 ]
