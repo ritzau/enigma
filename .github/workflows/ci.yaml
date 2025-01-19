@@ -49,5 +49,6 @@ jobs:
           elif [[ "${{ matrix.task }}" == "clippy" ]]; then
             cargo clippy -- -D warnings
           elif [[ "${{ matrix.task }}" == "coverage" ]]; then
+            cargo +stable install cargo-llvm-cov --locked
             cargo llvm-cov --release -- -Zprofile
           fi
