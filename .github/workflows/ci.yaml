@@ -1,0 +1,54 @@
+name: Build, Test, and Analyze
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+env:
+  # Disable incremental compilation for faster from-scratch builds
+  CARGO_INCREMENTAL: 0
+
+jobs:
+  rust_tasks:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        task: [build, test, fmt, clippy, coverage]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up caches
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Set up Rust
+        run: |
+          rustup update
+          sudo apt-get install protobuf-compiler
+
+      - name: Run Cargo Task
+        run: |
+          if [[ "${{ matrix.task }}" == "build" ]]; then
+            cargo build --release --all
+          elif [[ "${{ matrix.task }}" == "test" ]]; then
+            cargo test --release --all
+          elif [[ "${{ matrix.task }}" == "fmt" ]]; then
+            cargo fmt -- --check
+          elif [[ "${{ matrix.task }}" == "clippy" ]]; then
+            cargo clippy -- -D warnings
+          elif [[ "${{ matrix.task }}" == "coverage" ]]; then
+            cargo +stable install cargo-llvm-cov --locked
+            cargo llvm-cov --all
+          fi
