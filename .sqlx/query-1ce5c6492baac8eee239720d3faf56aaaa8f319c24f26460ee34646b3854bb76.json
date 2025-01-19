@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM sessions WHERE refresh_token_expiry < $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "1ce5c6492baac8eee239720d3faf56aaaa8f319c24f26460ee34646b3854bb76"
+}

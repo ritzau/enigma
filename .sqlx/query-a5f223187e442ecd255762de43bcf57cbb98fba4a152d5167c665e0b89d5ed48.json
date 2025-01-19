@@ -1,0 +1,37 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE sessions\n            SET access_token = gen_random_uuid(),\n                access_token_expiry = $2,\n                refresh_token = gen_random_uuid(),\n                refresh_token_expiry = $3,\n                ip_address = $4,\n                updated_at = NOW()\n            WHERE refresh_token = $1\n            RETURNING user_id, access_token, refresh_token",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "access_token",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "refresh_token",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Timestamptz",
+        "Timestamptz",
+        "Varchar"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "a5f223187e442ecd255762de43bcf57cbb98fba4a152d5167c665e0b89d5ed48"
+}
