@@ -1,0 +1,55 @@
+name: Build and Test iOS and Rust
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build_ios:
+    runs-on: macos-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v2
+
+      - name: Set up Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.0.app
+
+      - name: Install dependencies using Swift Package Manager
+        run: |
+          swift package resolve
+
+      - name: Build the project for iOS
+        run: |
+          xcodebuild -project modules/apps/iOS/Enigma/Enigma.xcodeproj
+
+  rust_tasks:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        task: [build, test, fmt, clippy, coverage]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v2
+
+      - name: Set up Rust
+        uses: actions/setup-rust@v1
+        with:
+          rust-version: stable
+
+      - name: Run Cargo Task
+        run: |
+          if [[ "${{ matrix.task }}" == "build" ]]; then
+            cargo build --release
+          elif [[ "${{ matrix.task }}" == "test" ]]; then
+            cargo test --release
+          elif [[ "${{ matrix.task }}" == "fmt" ]]; then
+            cargo fmt -- --check
+          elif [[ "${{ matrix.task }}" == "clippy" ]]; then
+            cargo clippy -- -D warnings
+          elif [[ "${{ matrix.task }}" == "coverage" ]]; then
+            cargo llvm-cov --release -- -Zprofile
+          fi
