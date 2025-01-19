@@ -32,6 +32,12 @@ impl MockAuthDatabase {
     }
 }
 
+impl Default for MockAuthDatabase {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[cfg(test)]
 #[async_trait]
 impl AuthDatabase for MockAuthDatabase {

@@ -72,8 +72,7 @@ async fn run_command(cli: Cli) -> Result<(), Box<dyn Error>> {
             }
             AuthCommands::Delete { user_id } => {
                 let mut client = GrpcAuthClient::default().await?;
-                let response = client.delete_account(&user_id.into()).await?;
-                println!("RESPONSE={:?}", response);
+                client.delete_account(&user_id.into()).await?;
             }
             AuthCommands::ChangePassword {
                 user_id,
@@ -81,10 +80,9 @@ async fn run_command(cli: Cli) -> Result<(), Box<dyn Error>> {
                 new_password,
             } => {
                 let mut client = GrpcAuthClient::default().await?;
-                let response = client
+                client
                     .change_password(user_id, &old_password, &new_password)
                     .await?;
-                println!("RESPONSE={:?}", response);
             }
             AuthCommands::GetSession { access_token } => {
                 let mut client = GrpcAuthClient::default().await?;

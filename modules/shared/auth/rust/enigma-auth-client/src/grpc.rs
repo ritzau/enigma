@@ -27,7 +27,7 @@ impl GrpcAuthClient {
     }
 
     pub async fn default() -> Result<Self, Box<dyn Error>> {
-        Ok(Self::connect("http://[::1]:50051").await?)
+        Self::connect("http://[::1]:50051").await
     }
 }
 

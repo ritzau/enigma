@@ -84,7 +84,7 @@ impl<T: AuthDatabase> EnigmaAuthService for DefaultAuthService<T> {
         if verify_password(&password_hash, old_password).unwrap_or(false) {
             let new_hash =
                 hash(new_password).map_err(|e| format!("Failed to hash password: {}", e))?;
-            self.db.set_hash(&user_id, &new_hash).await?;
+            self.db.set_hash(user_id, &new_hash).await?;
             Ok(())
         } else {
             Err("Invalid password".into())
@@ -99,7 +99,7 @@ impl<T: AuthDatabase> EnigmaAuthService for DefaultAuthService<T> {
         let (access_token, refresh_token) = self
             .db
             .refresh_session(
-                &refresh_token,
+                refresh_token,
                 Duration::minutes(1),
                 Duration::days(28),
                 remote_ip,
@@ -181,7 +181,7 @@ fn hash(password: &str) -> Result<PasswordHash, password_hash::Error> {
 
 fn verify_password(hash: &PasswordHash, password: &str) -> Result<bool, password_hash::Error> {
     let argon2 = argon_config();
-    let parsed_hash = argon2::PasswordHash::new(&hash.as_str())?;
+    let parsed_hash = argon2::PasswordHash::new(hash.as_str())?;
     Ok(argon2
         .verify_password(password.as_bytes(), &parsed_hash)
         .is_ok())
