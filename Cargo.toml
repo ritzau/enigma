@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "modules/backend/enigma/rust/*",
     "modules/shared/auth/rust/*",
     "modules/tools/enigma-client/rust/*",
 ]
