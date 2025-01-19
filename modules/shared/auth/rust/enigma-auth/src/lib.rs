@@ -121,6 +121,10 @@ impl From<Uuid> for AccessToken {
 }
 
 impl AccessToken {
+    pub fn new_random() -> Self {
+        Self(Uuid::new_v4())
+    }
+
     /// Returns the access token as a `Uuid`.
     pub fn value(&self) -> Uuid {
         self.0
@@ -146,6 +150,10 @@ impl From<Uuid> for RefreshToken {
 }
 
 impl RefreshToken {
+    pub fn new_random() -> Self {
+        Self(Uuid::new_v4())
+    }
+
     /// Returns the refresh token as a `Uuid`.
     pub fn value(&self) -> Uuid {
         self.0

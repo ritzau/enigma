@@ -5,6 +5,9 @@ use std::net::IpAddr;
 use time::OffsetDateTime;
 use tonic::async_trait;
 
+#[cfg(test)]
+pub mod mock;
+
 pub mod postgres;
 
 #[async_trait]
@@ -19,7 +22,11 @@ pub trait AuthDatabase: Send + Sync {
 
     async fn delete_user(&self, user_id: &UserId) -> Result<(), Box<dyn Error>>;
 
-    async fn set_hash(&self, user_id: &UserId, hash: &PasswordHash) -> Result<(), Box<dyn Error>>;
+    async fn set_hash(
+        &self,
+        user_id: &UserId,
+        hash: &PasswordHash,
+    ) -> Result<(), Box<dyn Error>>;
 
     async fn hash(&self, user_id: &UserId) -> Result<PasswordHash, Box<dyn Error>>;
 

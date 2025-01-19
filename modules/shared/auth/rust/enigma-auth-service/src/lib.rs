@@ -186,3 +186,100 @@ fn verify_password(hash: &PasswordHash, password: &str) -> Result<bool, password
         .verify_password(password.as_bytes(), &parsed_hash)
         .is_ok())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use db::mock::MockAuthDatabase;
+
+    #[tokio::test]
+    async fn test_create_account() {
+        let db = MockAuthDatabase::new();
+        let service = DefaultAuthService::new(db);
+
+        let result = service.create_account("testuser", "password").await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_delete_account() {
+        let db = MockAuthDatabase::new();
+        let service = DefaultAuthService::new(db);
+
+        let user_id = UserId::from(1);
+        let result = service.delete_account(&user_id).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_bad_password_change() {
+        let db = MockAuthDatabase::new();
+        let service = DefaultAuthService::new(db);
+
+        let user_id = UserId::from(1);
+        let result = service
+            .change_password(&user_id, "old_password", "new_password")
+            .await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_bad_session_refresh() {
+        let db = MockAuthDatabase::new();
+        let service = DefaultAuthService::new(db);
+
+        let refresh_token = RefreshToken::new_random();
+        let result = service.refresh_session(&refresh_token, &None).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_login() {
+        let db = MockAuthDatabase::new();
+        let service = DefaultAuthService::new(db);
+        service
+            .create_account("testuser", "password")
+            .await
+            .unwrap();
+
+        let result = service.login("testuser", "password", None).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_bad_login() {
+        let db = MockAuthDatabase::new();
+        let service = DefaultAuthService::new(db);
+
+        let result = service.login("testuser", "password", None).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_list_accounts() {
+        let db = MockAuthDatabase::new();
+        let service = DefaultAuthService::new(db);
+
+        let result = service.list_accounts().await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_get_session() {
+        let db = MockAuthDatabase::new();
+        let service = DefaultAuthService::new(db);
+
+        let access_token = AccessToken::new_random();
+        let result = service.get_session(&access_token).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_purge_expired_sessions() {
+        let db = MockAuthDatabase::new();
+        let service = DefaultAuthService::new(db);
+
+        let result = service.purge_expired_sessions().await;
+        assert!(result.is_ok());
+    }
+}

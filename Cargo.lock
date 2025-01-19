@@ -541,8 +541,10 @@ dependencies = [
  "enigma-auth-grpc",
  "sqlx",
  "time",
+ "tokio",
  "tonic",
  "tracing",
+ "uuid",
 ]
 
 [[package]]
