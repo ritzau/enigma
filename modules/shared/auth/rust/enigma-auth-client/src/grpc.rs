@@ -1,4 +1,5 @@
-use enigma_auth::{AccessToken, EnigmaAuthClient, RefreshToken, UserId};
+use crate::EnigmaAuthClient;
+use enigma_auth::{AccessToken, RefreshToken, UserId};
 use enigma_auth_grpc::{
     auth_client::AuthClient, ChangePasswordRequest, CreateAccountRequest, DeleteAccountRequest,
     GetSessionRequest, ListAccountsRequest, LoginRequest, PurgeExpiredSessionsRequest,
