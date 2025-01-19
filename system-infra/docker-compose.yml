@@ -1,0 +1,30 @@
+services:
+  db:
+    image: postgres:17.2
+    container_name: enigma_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: supersecurepassword
+    network_mode: "host"
+    ports:
+      - "127.0.0.1:5432:5432"  # Restrict container to localhost
+      # - "5432:5432"  # Restrict container to localhost
+    volumes:
+      - ./db/init/:/docker-entrypoint-initdb.d/:ro
+      - ./etc/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - db_data:/var/lib/postgresql/data
+    command: [ "postgres", "-c", "config_file=/etc/postgresql/postgresql.conf" ]
+
+  redis:
+    image: redis:7.4
+    container_name: enigma_redis
+    restart: unless-stopped
+    network_mode: "host"
+    ports:
+      - "127.0.0.1:6379:6379"  # Restrict Redis to localhost
+    volumes:
+      - redis_data:/data
+
+volumes:
+  db_data:
+  redis_data:
