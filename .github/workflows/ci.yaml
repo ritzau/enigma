@@ -43,14 +43,14 @@ jobs:
       - name: Run Cargo Task
         run: |
           if [[ "${{ matrix.task }}" == "build" ]]; then
-            cargo build --release
+            cargo build --release --all
           elif [[ "${{ matrix.task }}" == "test" ]]; then
-            cargo test --release
+            cargo test --release --all
           elif [[ "${{ matrix.task }}" == "fmt" ]]; then
             cargo fmt -- --check
           elif [[ "${{ matrix.task }}" == "clippy" ]]; then
             cargo clippy -- -D warnings
           elif [[ "${{ matrix.task }}" == "coverage" ]]; then
             cargo +stable install cargo-llvm-cov --locked
-            cargo llvm-cov --release -- -Zprofile
+            cargo llvm-cov --all
           fi
