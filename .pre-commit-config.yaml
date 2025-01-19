@@ -1,0 +1,33 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+default_install_hook_types: [ pre-commit, pre-push ]
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-added-large-files
+      - id: check-yaml
+  - repo: local
+    hooks:
+      - id: rustfmt
+        name: Rust format
+        description: Check if all files follow the rustfmt style
+        entry: cargo fmt --all -- --check --color always
+        language: system
+        pass_filenames: false
+      - id: clippy
+        name: Clippy linter
+        description: Run the clippy linter
+        entry: cargo clippy --all --all-targets -- -D warnings
+        language: system
+        pass_filenames: false
+        stages: [ pre-push ]
+      - id: unit-tests
+        name: Unit tests
+        description: Run cargo test
+        entry: cargo test --quiet --all
+        language: system
+        pass_filenames: false
+        stages: [ pre-push ]
