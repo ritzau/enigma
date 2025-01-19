@@ -568,6 +568,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "enigma-service"
+version = "0.1.0"
+dependencies = [
+ "enigma-auth",
+ "enigma-auth-grpc",
+ "enigma-auth-service",
+ "tokio",
+ "tonic",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "equivalent"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

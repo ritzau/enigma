@@ -1,0 +1,13 @@
+[package]
+name = "enigma-service"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+enigma-auth-grpc= { path = "../../../../shared/auth/rust/enigma-auth-grpc" }
+enigma-auth-service = { path = "../../../../shared/auth/rust/enigma-auth-service", features = ["grpc"] }
+enigma-auth= { path = "../../../../shared/auth/rust/enigma-auth" }
+tokio = { version = "1.43.0", features = ["rt-multi-thread"] }
+tonic = "0.12.3"
+tracing = "0.1.41"
+tracing-subscriber = "0.3.19"
