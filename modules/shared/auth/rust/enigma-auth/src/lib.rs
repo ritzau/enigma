@@ -9,11 +9,12 @@
 //! - `UserHash`: Represents a hashed user password.
 //! - `AccessToken`: Represents an access token.
 
+use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use uuid::Uuid;
 
 /// Represents a user ID.
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub struct UserId(i64);
 
 impl UserId {
@@ -45,7 +46,7 @@ impl From<UserId> for i64 {
 }
 
 /// Represents a user name.
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub struct UserName(String);
 
 impl UserName {
@@ -77,7 +78,7 @@ impl From<String> for UserName {
 }
 
 /// Represents a hashed user password.
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub struct PasswordHash(String);
 
 impl PasswordHash {
@@ -109,7 +110,7 @@ impl From<String> for PasswordHash {
 }
 
 /// Represents an access token.
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub struct AccessToken(Uuid);
 
 impl From<Uuid> for AccessToken {
@@ -138,7 +139,7 @@ impl Display for AccessToken {
 }
 
 /// Represents a refresh token.
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub struct RefreshToken(Uuid);
 
 impl From<Uuid> for RefreshToken {
@@ -164,6 +165,13 @@ impl Display for RefreshToken {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
     }
+}
+
+#[derive(Clone, Debug)]
+pub enum AuthExtension {
+    Anonymous,
+    Authenticated(UserId, UserName, Vec<String>),
+    Failed,
 }
 
 #[cfg(test)]

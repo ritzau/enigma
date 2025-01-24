@@ -1,17 +1,34 @@
-use enigma_auth::{AccessToken, RefreshToken, UserId};
+use async_trait::async_trait;
+use enigma_auth::{AccessToken, RefreshToken, UserId, UserName};
 use mockall::predicate::*;
 use mockall::*;
-use tonic::async_trait;
 use uuid::Uuid;
 
 #[cfg(feature = "grpc")]
 pub mod grpc;
+
+pub mod authenticator;
+mod session;
 
 /// The `EnigmaAuthClient` trait provides asynchronous methods for creating accounts, deleting accounts,
 /// retrieving session information, listing accounts, logging in, and purging expired sessions.
 #[async_trait]
 #[automock]
 pub trait EnigmaAuthClient {
+    ///
+    /// # Parameters
+    /// - `user_id: UserId`: The ID of the user.
+    /// - `role: &str`: The role to be added.
+    ///
+    /// # Returns
+    /// - `Result<(), Box<dyn std::error::Error>>`: The function returns a `Result` type.
+    ///   On success, it returns an empty tuple `()`. On failure, it returns a boxed dynamic error.
+    async fn add_role(
+        &mut self,
+        user_id: UserId,
+        role: &str,
+    ) -> Result<(), Box<dyn std::error::Error>>;
+
     /// Asynchronously creates a new user account.
     ///
     /// # Parameters
@@ -65,7 +82,7 @@ pub trait EnigmaAuthClient {
     ///   On success, it returns a tuple containing the new `AccessToken` and `RefreshToken`.
     ///   On failure, it returns a boxed dynamic error.
     async fn refresh_session(
-        &mut self,
+        &self,
         refresh_token: &Uuid,
     ) -> Result<(AccessToken, RefreshToken), Box<dyn std::error::Error>>;
 
@@ -82,6 +99,20 @@ pub trait EnigmaAuthClient {
         &mut self,
         access_token: &Uuid,
     ) -> Result<UserId, Box<dyn std::error::Error>>;
+
+    /// Asynchronously retrieves user information.
+    ///
+    /// # Parameters
+    /// - `user_id: UserId`: The ID of the user.
+    ///
+    /// # Returns
+    /// - `Result<(UserId, UserName, Vec<String>), Box<dyn std::error::Error>>`: The function returns a `Result` type.
+    ///   On success, it returns a tuple containing the `UserId`, `UserName`, and a vector of roles.
+    ///   On failure, it returns a boxed dynamic error.
+    async fn get_user_info(
+        &mut self,
+        user_id: UserId,
+    ) -> Result<(UserId, UserName, Vec<String>), Box<dyn std::error::Error>>;
 
     /// Asynchronously lists all user accounts.
     ///
@@ -114,4 +145,19 @@ pub trait EnigmaAuthClient {
     ///   On success, it returns a `u64` representing the number of purged sessions.
     ///   On failure, it returns a boxed dynamic error.
     async fn purge_expired_sessions(&mut self) -> Result<u64, Box<dyn std::error::Error>>;
+
+    /// Asynchronously removes a role from a user.
+    ///
+    /// # Parameters
+    /// - `user_id: UserId`: The ID of the user.
+    /// - `role: &str`: The role to be removed.
+    ///
+    /// # Returns
+    /// - `Result<(), Box<dyn std::error::Error>>`: The function returns a `Result` type.
+    ///   On success, it returns an empty tuple `()`. On failure, it returns a boxed dynamic error.
+    async fn remove_role(
+        &mut self,
+        user_id: UserId,
+        role: &str,
+    ) -> Result<(), Box<dyn std::error::Error>>;
 }

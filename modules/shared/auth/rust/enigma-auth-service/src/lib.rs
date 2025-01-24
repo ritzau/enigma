@@ -1,12 +1,12 @@
 use argon2::password_hash::rand_core::OsRng;
 use argon2::password_hash::SaltString;
 use argon2::{password_hash, Argon2, PasswordHasher, PasswordVerifier};
+use async_trait::async_trait;
 use chrono::Duration;
 use db::AuthDatabase;
-use enigma_auth::{AccessToken, PasswordHash, RefreshToken, UserId};
+use enigma_auth::{AccessToken, PasswordHash, RefreshToken, UserId, UserName};
 use std::error::Error;
 use std::net::IpAddr;
-use tonic::async_trait;
 
 pub mod db;
 
@@ -26,6 +26,10 @@ pub trait EnigmaAuthService: Send + Sync {
         new_password: &str,
     ) -> Result<(), Box<dyn Error>>;
 
+    async fn add_role(&self, user_id: &UserId, role: &str) -> Result<(), Box<dyn Error>>;
+
+    async fn remove_role(&self, user_id: &UserId, role: &str) -> Result<(), Box<dyn Error>>;
+
     async fn refresh_session(
         &self,
         refresh_token: &RefreshToken,
@@ -37,9 +41,14 @@ pub trait EnigmaAuthService: Send + Sync {
         username: &str,
         password: &str,
         remote_ip: Option<IpAddr>,
-    ) -> Result<(AccessToken, RefreshToken), Box<dyn Error>>;
+    ) -> Result<(UserId, AccessToken, RefreshToken), Box<dyn Error>>;
 
     async fn list_accounts(&self) -> Result<Vec<(i64, String)>, Box<dyn Error>>;
+
+    async fn get_user_info(
+        &self,
+        user_id: &UserId,
+    ) -> Result<(UserId, UserName, Vec<String>), Box<dyn Error>>;
 
     async fn get_session(
         &self,
@@ -91,6 +100,14 @@ impl<T: AuthDatabase> EnigmaAuthService for DefaultAuthService<T> {
         }
     }
 
+    async fn add_role(&self, user_id: &UserId, role: &str) -> Result<(), Box<dyn Error>> {
+        self.db.add_role(user_id, role).await
+    }
+
+    async fn remove_role(&self, user_id: &UserId, role: &str) -> Result<(), Box<dyn Error>> {
+        self.db.remove_role(user_id, role).await
+    }
+
     async fn refresh_session(
         &self,
         refresh_token: &RefreshToken,
@@ -114,13 +131,13 @@ impl<T: AuthDatabase> EnigmaAuthService for DefaultAuthService<T> {
         username: &str,
         password: &str,
         remote_ip: Option<IpAddr>,
-    ) -> Result<(AccessToken, RefreshToken), Box<dyn Error>> {
+    ) -> Result<(UserId, AccessToken, RefreshToken), Box<dyn Error>> {
         let user_id = self.db.user_id(&username.into()).await?;
 
         let hash = self.db.hash(&user_id).await?;
 
         if verify_password(&hash, password).unwrap_or(false) {
-            Ok(self
+            let (access_token, refresh_token) = self
                 .db
                 .create_session(
                     &user_id,
@@ -128,7 +145,9 @@ impl<T: AuthDatabase> EnigmaAuthService for DefaultAuthService<T> {
                     Duration::weeks(4),
                     remote_ip,
                 )
-                .await?)
+                .await?;
+
+            Ok((user_id, access_token, refresh_token))
         } else {
             Err("Invalid password".into())
         }
@@ -142,6 +161,13 @@ impl<T: AuthDatabase> EnigmaAuthService for DefaultAuthService<T> {
             .into_iter()
             .map(|(id, name)| (id.value(), name.to_string()))
             .collect())
+    }
+
+    async fn get_user_info(
+        &self,
+        user_id: &UserId,
+    ) -> Result<(UserId, UserName, Vec<String>), Box<dyn Error>> {
+        self.db.get_user_info(user_id).await
     }
 
     async fn get_session(
