@@ -1,4 +1,5 @@
 use crate::db::AuthDatabase;
+use async_trait::async_trait;
 use chrono::Duration;
 use chrono::Utc;
 use enigma_auth::{AccessToken, PasswordHash, RefreshToken, UserId, UserName};
@@ -8,7 +9,6 @@ use std::error::Error;
 use std::net::IpAddr;
 use time::format_description::well_known::Rfc3339;
 use time::OffsetDateTime;
-use tonic::async_trait;
 use tracing::instrument;
 
 pub struct PostgresAuthDatabase {
@@ -27,7 +27,8 @@ impl PostgresAuthDatabase {
             "CREATE TABLE IF NOT EXISTS accounts (
                 user_id BIGSERIAL PRIMARY KEY,
                 username TEXT UNIQUE NOT NULL,
-                hash TEXT NOT NULL
+                hash TEXT NOT NULL,
+                roles TEXT[] DEFAULT '{}'
             );
             ",
             "CREATE INDEX IF NOT EXISTS idx_username ON accounts(username);",
@@ -122,6 +123,37 @@ impl AuthDatabase for PostgresAuthDatabase {
         Ok(row.hash.into())
     }
 
+    #[instrument(skip_all, err, fields(%user_id, role))]
+    async fn add_role(&self, user_id: &UserId, role: &str) -> Result<(), Box<dyn Error>> {
+        sqlx::query!(
+            "UPDATE accounts
+            SET roles = array_append(roles, $2)
+            WHERE user_id = $1
+            AND NOT ($2 = ANY(roles))",
+            user_id.value(),
+            role
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    #[instrument(skip_all, err, fields(%user_id, role))]
+    async fn remove_role(&self, user_id: &UserId, role: &str) -> Result<(), Box<dyn Error>> {
+        sqlx::query!(
+            "UPDATE accounts
+            SET roles = array_remove(roles, $2)
+            WHERE user_id = $1",
+            user_id.value(),
+            role
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
     #[instrument(skip_all, err)]
     async fn list_accounts(&self) -> Result<Vec<(UserId, UserName)>, Box<dyn Error>> {
         let rows = sqlx::query!("SELECT user_id, username FROM accounts")
@@ -134,6 +166,25 @@ impl AuthDatabase for PostgresAuthDatabase {
             .collect();
 
         Ok(users)
+    }
+
+    #[instrument(skip_all, err, fields(%user_id))]
+    async fn get_user_info(
+        &self,
+        user_id: &UserId,
+    ) -> Result<(UserId, UserName, Vec<String>), Box<dyn Error>> {
+        let row = sqlx::query!(
+            "SELECT user_id, username, roles FROM accounts WHERE user_id = $1",
+            user_id.value()
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok((
+            UserId::from(row.user_id),
+            UserName::from(row.username),
+            row.roles.unwrap(),
+        ))
     }
 
     #[instrument(skip_all, err, fields(%user_id, ttl))]
@@ -183,10 +234,13 @@ impl AuthDatabase for PostgresAuthDatabase {
             "SELECT user_id, access_token_expiry FROM sessions WHERE access_token = $1 AND access_token_expiry > NOW()",
             access_token.value()
         )
-        .fetch_one(&self.pool)
+        .fetch_optional(&self.pool)
         .await?;
 
-        Ok((UserId::from(row.user_id), row.access_token_expiry))
+        match row {
+            Some(row) => Ok((UserId::from(row.user_id), row.access_token_expiry)),
+            None => Err("No active session".into()),
+        }
     }
 
     #[instrument(skip_all, err)]

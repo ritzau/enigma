@@ -8,12 +8,14 @@ default = ["grpc"]
 grpc = ["dep:enigma-auth-grpc"]
 
 [dependencies]
+async-trait = "0.1.85"
 enigma-auth = { path = "../enigma-auth" }
 enigma-auth-grpc = { path = "../enigma-auth-grpc", optional = true }
-log = { version = "0.4.25", features = ["kv"] }
+http-body = "1.0.1"
+mockall = "0.13.1"
+serde = { version = "1.0.217", features = ["derive"] }
+tokio = "1.43.0"
+toml = "0.8.19"
 tonic = "0.12.3"
 tracing = "0.1.41"
 uuid = { version = "1.11.0", features = ["v4"] }
-mockall = "0.13.1"
-
-[dev-dependencies]

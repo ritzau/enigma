@@ -1,17 +1,17 @@
 use crate::db::AuthDatabase;
+use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
 use enigma_auth::{AccessToken, PasswordHash, RefreshToken, UserId, UserName};
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 use std::error::Error;
 use std::net::IpAddr;
 use time::format_description::well_known::Rfc3339;
 use time::OffsetDateTime;
 use tokio::sync::RwLock;
-use tonic::async_trait;
 use uuid::Uuid;
 
 struct Maps {
-    accounts: HashMap<UserName, (UserId, PasswordHash)>,
+    accounts: HashMap<UserName, (UserId, PasswordHash, BTreeSet<String>)>,
     sessions: HashMap<AccessToken, (UserId, DateTime<Utc>)>,
     refresh_tokens: HashMap<RefreshToken, (AccessToken, RefreshToken)>,
 }
@@ -49,8 +49,10 @@ impl AuthDatabase for MockAuthDatabase {
         let mut maps = self.maps.write().await;
 
         let user_id = UserId::from(maps.accounts.len() as i64 + 1);
-        maps.accounts
-            .insert(username.clone(), (user_id.clone(), hash.clone()));
+        maps.accounts.insert(
+            username.clone(),
+            (user_id.clone(), hash.clone(), BTreeSet::new()),
+        );
         Ok(user_id)
     }
 
@@ -59,20 +61,20 @@ impl AuthDatabase for MockAuthDatabase {
 
         maps.accounts
             .get(username)
-            .map(|(id, _)| id.clone())
+            .map(|(id, ..)| id.clone())
             .ok_or_else(|| "User not found".into())
     }
 
     async fn delete_user(&self, user_id: &UserId) -> Result<(), Box<dyn Error>> {
         let mut maps = self.maps.write().await;
-        maps.accounts.retain(|_, (id, _)| id != user_id);
+        maps.accounts.retain(|_, (id, ..)| id != user_id);
         Ok(())
     }
 
     async fn set_hash(&self, user_id: &UserId, hash: &PasswordHash) -> Result<(), Box<dyn Error>> {
         let mut maps = self.maps.write().await;
 
-        for (_, (id, stored_hash)) in maps.accounts.iter_mut() {
+        for (_, (id, stored_hash, ..)) in maps.accounts.iter_mut() {
             if id == user_id {
                 *stored_hash = hash.clone();
                 return Ok(());
@@ -86,9 +88,33 @@ impl AuthDatabase for MockAuthDatabase {
 
         maps.accounts
             .values()
-            .find(|(id, _)| id == user_id)
-            .map(|(_, hash)| hash.clone())
+            .find(|(id, ..)| id == user_id)
+            .map(|(_, hash, ..)| hash.clone())
             .ok_or_else(|| "User not found".into())
+    }
+
+    async fn add_role(&self, user_id: &UserId, role: &str) -> Result<(), Box<dyn Error>> {
+        let mut maps = self.maps.write().await;
+
+        for (_, (id, _, roles)) in maps.accounts.iter_mut() {
+            if id == user_id {
+                roles.insert(role.to_string());
+                return Ok(());
+            }
+        }
+        Err("User not found".into())
+    }
+
+    async fn remove_role(&self, user_id: &UserId, role: &str) -> Result<(), Box<dyn Error>> {
+        let mut maps = self.maps.write().await;
+
+        for (_, (id, _, roles)) in maps.accounts.iter_mut() {
+            if id == user_id {
+                roles.remove(role);
+                return Ok(());
+            }
+        }
+        Err("User not found".into())
     }
 
     async fn list_accounts(&self) -> Result<Vec<(UserId, UserName)>, Box<dyn Error>> {
@@ -97,8 +123,27 @@ impl AuthDatabase for MockAuthDatabase {
         Ok(maps
             .accounts
             .iter()
-            .map(|(username, (id, _))| (id.clone(), username.clone()))
+            .map(|(username, (id, ..))| (id.clone(), username.clone()))
             .collect())
+    }
+
+    async fn get_user_info(
+        &self,
+        user_id: &UserId,
+    ) -> Result<(UserId, UserName, Vec<String>), Box<dyn Error>> {
+        let maps = self.maps.write().await;
+
+        for (username, (id, _, roles)) in maps.accounts.iter() {
+            if id == user_id {
+                return Ok((
+                    user_id.clone(),
+                    username.clone(),
+                    roles.iter().cloned().collect(),
+                ));
+            }
+        }
+
+        Err("User not found".into())
     }
 
     async fn create_session(

@@ -1,30 +1,68 @@
-use crate::EnigmaAuthClient;
-use enigma_auth::{AccessToken, RefreshToken, UserId};
+use crate::{session, EnigmaAuthClient};
+use async_trait::async_trait;
+use enigma_auth::{AccessToken, RefreshToken, UserId, UserName};
 use enigma_auth_grpc::{
-    auth_client::AuthClient, ChangePasswordRequest, CreateAccountRequest, DeleteAccountRequest,
-    GetSessionRequest, ListAccountsRequest, LoginRequest, PurgeExpiredSessionsRequest,
-    RefreshSessionRequest,
+    auth_client::AuthClient, AddRoleRequest, ChangePasswordRequest, CreateAccountRequest,
+    DeleteAccountRequest, GetSessionRequest, GetUserInfoRequest, ListAccountsRequest, LoginRequest,
+    PurgeExpiredSessionsRequest, RefreshSessionRequest, RemoveRoleRequest,
 };
+use http_body::Body;
+use session::Session;
 use std::convert::Into;
 use std::error::Error;
-use tonic::async_trait;
+use std::path::Path;
+use std::sync::Arc;
+use tokio::sync::{Mutex, RwLock};
 use tonic::transport::Channel;
+use tonic::IntoRequest;
 use tracing::instrument;
 use uuid::Uuid;
 
-pub struct GrpcAuthClient {
-    client: AuthClient<Channel>,
+use crate::authenticator::Authenticator;
+use tonic::body::BoxBody;
+use tonic::client::GrpcService;
+use tonic::codegen::{Bytes, StdError};
+use tonic::Request;
+
+pub struct GrpcAuthClient<T>
+where
+    T: GrpcService<BoxBody>,
+    T::Error: Into<StdError>,
+    T::Future: Send + 'static,
+    T::ResponseBody: Body<Data = Bytes> + Send + 'static,
+    <T::ResponseBody as Body>::Error: Into<StdError> + Send,
+{
+    client: Arc<Mutex<AuthClient<T>>>,
+    authenticator: Authenticator<T>,
 }
 
-impl GrpcAuthClient {
-    fn new(client: AuthClient<Channel>) -> Self {
-        GrpcAuthClient { client }
+impl<T> GrpcAuthClient<T>
+where
+    T: GrpcService<BoxBody> + Send + Sync + 'static,
+    T::Error: Into<StdError>,
+    T::Future: Send + 'static,
+    T::ResponseBody: Body<Data = Bytes> + Send + 'static,
+    <T::ResponseBody as Body>::Error: Into<StdError> + Send,
+{
+    pub fn new(client: AuthClient<T>) -> Self {
+        // TODO(ENIGMA-23): Hard coded a few time too many...
+        let session = Arc::new(RwLock::new(
+            Session::load(Path::new("enigma-session.toml")).unwrap(),
+        ));
+        let client = Arc::new(Mutex::new(client));
+        let authenticator = Authenticator::<T>::new(client.clone(), session.clone());
+        Self {
+            client,
+            authenticator,
+        }
     }
+}
 
+impl GrpcAuthClient<Channel> {
     #[instrument(err)]
     pub async fn connect(url: &str) -> Result<Self, Box<dyn Error>> {
-        let client = AuthClient::connect(String::from(url)).await?;
-        Ok(Self::new(client))
+        let channel = Channel::from_shared(url.to_string())?.connect().await?;
+        Ok(Self::new(AuthClient::new(channel)))
     }
 
     pub async fn default() -> Result<Self, Box<dyn Error>> {
@@ -33,30 +71,59 @@ impl GrpcAuthClient {
 }
 
 #[async_trait]
-impl EnigmaAuthClient for GrpcAuthClient {
+impl<T> EnigmaAuthClient for GrpcAuthClient<T>
+where
+    T: GrpcService<BoxBody> + Send + Sync + 'static,
+    T::Error: Into<StdError>,
+    T::Future: Send + 'static,
+    T::ResponseBody: Body<Data = Bytes> + Send + 'static,
+    <T::ResponseBody as Body>::Error: Into<StdError> + Send,
+{
+    async fn add_role(&mut self, user_id: UserId, role: &str) -> Result<(), Box<dyn Error>> {
+        self.authenticator
+            .authenticated_call(
+                || AddRoleParameters(user_id.clone(), role.into()),
+                |request| {
+                    let client = self.client.clone();
+                    async move { client.lock().await.add_role(request).await }
+                },
+            )
+            .await?;
+
+        Ok(())
+    }
+
     #[instrument(skip(self, password), err)]
     async fn create_account(
         &mut self,
         username: &str,
         password: &str,
     ) -> Result<UserId, Box<dyn Error>> {
-        let request = tonic::Request::new(CreateAccountRequest {
-            username: username.into(),
-            password: password.into(),
-        });
-
-        let response = self.client.create_account(request).await?;
+        let response = self
+            .authenticator
+            .authenticated_call(
+                || CreateAccountParameters(UserName::from(username), password.into()),
+                |request| {
+                    let client = self.client.clone();
+                    async move { client.lock().await.create_account(request).await }
+                },
+            )
+            .await?;
 
         Ok(UserId::from(response.get_ref().user_id))
     }
 
     #[instrument(skip(self), err)]
     async fn delete_account(&mut self, user_id: &UserId) -> Result<(), Box<dyn Error>> {
-        let request = tonic::Request::new(DeleteAccountRequest {
-            user_id: user_id.value(),
-        });
-
-        self.client.delete_account(request).await?;
+        self.authenticator
+            .authenticated_call(
+                || DeleteAccountParameters(user_id.clone()),
+                |request| {
+                    let client = self.client.clone();
+                    async move { client.lock().await.delete_account(request).await }
+                },
+            )
+            .await?;
 
         Ok(())
     }
@@ -68,23 +135,34 @@ impl EnigmaAuthClient for GrpcAuthClient {
         old_password: &str,
         new_password: &str,
     ) -> Result<(), Box<dyn Error>> {
-        let request = tonic::Request::new(ChangePasswordRequest {
-            user_id,
-            old_password: old_password.into(),
-            new_password: new_password.into(),
-        });
-        let _response = self.client.change_password(request).await?;
+        self.authenticator
+            .authenticated_call(
+                || {
+                    ChangePasswordParameters(
+                        UserId::from(user_id),
+                        old_password.into(),
+                        new_password.into(),
+                    )
+                },
+                |r| {
+                    let client = self.client.clone();
+                    async move { client.lock().await.change_password(r).await }
+                },
+            )
+            .await?;
+
         Ok(())
     }
 
+    #[instrument(skip(self, refresh_token), err)]
     async fn refresh_session(
-        &mut self,
+        &self,
         refresh_token: &Uuid,
     ) -> Result<(AccessToken, RefreshToken), Box<dyn Error>> {
-        let request = tonic::Request::new(RefreshSessionRequest {
+        let request = Request::new(RefreshSessionRequest {
             refresh_token: refresh_token.to_string(),
         });
-        let response = self.client.refresh_session(request).await?;
+        let response = self.client.lock().await.refresh_session(request).await?;
         let response = response.get_ref();
         Ok((
             AccessToken::from(Uuid::parse_str(&response.access_token)?),
@@ -94,19 +172,51 @@ impl EnigmaAuthClient for GrpcAuthClient {
 
     #[instrument(skip(self), err)]
     async fn get_session(&mut self, access_token: &Uuid) -> Result<UserId, Box<dyn Error>> {
-        let request = tonic::Request::new(GetSessionRequest {
+        let request = Request::new(GetSessionRequest {
             access_token: access_token.to_string(),
         });
 
-        let response = self.client.get_session(request).await?;
+        let response = self.client.lock().await.get_session(request).await?;
 
         Ok(UserId::from(response.get_ref().user_id))
     }
 
     #[instrument(skip(self), err)]
+    async fn get_user_info(
+        &mut self,
+        user_id: UserId,
+    ) -> Result<(UserId, UserName, Vec<String>), Box<dyn Error>> {
+        let response = self
+            .authenticator
+            .authenticated_call(
+                || GetUserInfoParameter(user_id.clone()),
+                |request| {
+                    let client = self.client.clone();
+                    async move { client.lock().await.get_user_info(request).await }
+                },
+            )
+            .await?
+            .into_inner();
+
+        Ok((
+            UserId::from(response.user_id),
+            UserName::from(response.username),
+            response.roles,
+        ))
+    }
+
+    #[instrument(skip(self), err)]
     async fn list_accounts(&mut self) -> Result<Vec<(UserId, String)>, Box<dyn Error>> {
-        let request = tonic::Request::new(ListAccountsRequest {});
-        let response = self.client.list_accounts(request).await?;
+        let response = self
+            .authenticator
+            .authenticated_call(
+                || ListAccountParameters {},
+                |request| {
+                    let client = self.client.clone();
+                    async move { client.lock().await.list_accounts(request).await }
+                },
+            )
+            .await?;
 
         let users = &response.get_ref().users;
         let result = users
@@ -123,29 +233,133 @@ impl EnigmaAuthClient for GrpcAuthClient {
         username: &str,
         password: &str,
     ) -> Result<(AccessToken, RefreshToken), Box<dyn Error>> {
-        let request = tonic::Request::new(LoginRequest {
+        let request = Request::new(LoginRequest {
             name: username.into(),
             password: password.into(),
         });
 
-        let response = self.client.login(request).await?.into_inner();
+        let response = self.client.lock().await.login(request).await?.into_inner();
 
-        Ok((
+        let session = Session::new(
+            UserId::from(response.user_id),
+            UserName::from(username),
             AccessToken::from(Uuid::parse_str(&response.access_token)?),
             RefreshToken::from(Uuid::parse_str(&response.refresh_token)?),
+        );
+        session.store(Path::new("enigma-session.toml"))?;
+
+        Ok((
+            session.access_token().clone(),
+            session.refresh_token().clone(),
         ))
     }
 
     #[instrument(skip(self), err)]
     async fn purge_expired_sessions(&mut self) -> Result<u64, Box<dyn Error>> {
-        let request = tonic::Request::new(PurgeExpiredSessionsRequest {});
-        let response = self.client.purge_expired_sessions(request).await?;
+        let request = Request::new(PurgeExpiredSessionsRequest {});
+        let response = self
+            .client
+            .lock()
+            .await
+            .purge_expired_sessions(request)
+            .await?;
         Ok(response.get_ref().purged_session_count)
+    }
+
+    async fn remove_role(&mut self, user_id: UserId, role: &str) -> Result<(), Box<dyn Error>> {
+        self.authenticator
+            .authenticated_call(
+                || RemoveRoleParameters(user_id.clone(), role.into()),
+                |request| {
+                    let client = self.client.clone();
+                    async move { client.lock().await.remove_role(request).await }
+                },
+            )
+            .await?;
+
+        Ok(())
     }
 }
 
-impl From<AuthClient<Channel>> for GrpcAuthClient {
-    fn from(client: AuthClient<Channel>) -> Self {
-        GrpcAuthClient::new(client)
+struct AddRoleParameters(UserId, String);
+
+impl IntoRequest<AddRoleRequest> for AddRoleParameters {
+    fn into_request(self) -> Request<AddRoleRequest> {
+        Request::new(AddRoleRequest {
+            user_id: self.0.value(),
+            role: self.1,
+        })
+    }
+}
+
+struct CreateAccountParameters(UserName, String);
+
+impl IntoRequest<CreateAccountRequest> for CreateAccountParameters {
+    fn into_request(self) -> Request<CreateAccountRequest> {
+        Request::new(CreateAccountRequest {
+            username: self.0.to_string(),
+            password: self.1,
+        })
+    }
+}
+
+struct DeleteAccountParameters(UserId);
+
+impl IntoRequest<DeleteAccountRequest> for DeleteAccountParameters {
+    fn into_request(self) -> Request<DeleteAccountRequest> {
+        Request::new(DeleteAccountRequest {
+            user_id: self.0.value(),
+        })
+    }
+}
+
+struct ListAccountParameters;
+
+impl IntoRequest<ListAccountsRequest> for ListAccountParameters {
+    fn into_request(self) -> Request<ListAccountsRequest> {
+        Request::new(ListAccountsRequest {})
+    }
+}
+
+struct ChangePasswordParameters(UserId, String, String);
+
+impl IntoRequest<ChangePasswordRequest> for ChangePasswordParameters {
+    fn into_request(self) -> Request<ChangePasswordRequest> {
+        Request::new(ChangePasswordRequest {
+            user_id: self.0.value(),
+            old_password: self.1,
+            new_password: self.2,
+        })
+    }
+}
+
+pub struct GetUserInfoParameter(UserId);
+
+impl IntoRequest<GetUserInfoRequest> for GetUserInfoParameter {
+    fn into_request(self) -> Request<GetUserInfoRequest> {
+        Request::new(GetUserInfoRequest {
+            user_id: self.0.value(),
+        })
+    }
+}
+
+pub struct RefreshSessionParameters(pub RefreshToken);
+
+impl IntoRequest<RefreshSessionRequest> for RefreshSessionParameters {
+    fn into_request(self) -> Request<RefreshSessionRequest> {
+        Request::new(RefreshSessionRequest {
+            refresh_token: self.0.value().to_string(),
+        })
+    }
+}
+
+struct RemoveRoleParameters(UserId, String);
+
+impl IntoRequest<RemoveRoleRequest> for RemoveRoleParameters {
+    fn into_request(self) -> Request<RemoveRoleRequest> {
+        Request::new(RemoveRoleRequest {
+            user_id: self.0.value(),
+            role: self.1,
+        })
     }
 }

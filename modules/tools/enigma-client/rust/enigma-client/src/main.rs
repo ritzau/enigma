@@ -2,6 +2,7 @@ use clap::{Parser, Subcommand};
 use enigma_auth_client::grpc::GrpcAuthClient;
 use enigma_auth_client::EnigmaAuthClient;
 use std::error::Error;
+use tonic::transport::Channel;
 use tracing::instrument;
 use tracing_subscriber::fmt::format::FmtSpan;
 use uuid::Uuid;
@@ -17,10 +18,18 @@ struct Cli {
 enum Commands {
     #[command(subcommand)]
     Auth(AuthCommands),
+    Login {
+        username: String,
+        password: String,
+    },
 }
 
 #[derive(Debug, Subcommand)]
 enum AuthCommands {
+    AddRole {
+        user_id: i64,
+        role: String,
+    },
     Create {
         username: String,
         password: String,
@@ -36,8 +45,15 @@ enum AuthCommands {
     GetSession {
         access_token: String,
     },
+    GetUserInfo {
+        user_id: i64,
+    },
     RefreshSession {
         refresh_token: String,
+    },
+    RemoveRole {
+        user_id: i64,
+        role: String,
     },
     List,
     Login {
@@ -56,7 +72,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let cli = Cli::parse();
 
-    run_command(cli, &mut GrpcAuthClient::default().await?).await?;
+    run_command(cli, &mut GrpcAuthClient::<Channel>::default().await?).await?;
 
     Ok(())
 }
@@ -65,6 +81,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
 async fn run_command(cli: Cli, client: &mut dyn EnigmaAuthClient) -> Result<(), Box<dyn Error>> {
     match cli.command {
         Commands::Auth(command) => match command {
+            AuthCommands::AddRole { user_id, role } => {
+                client.add_role(user_id.into(), &role).await?;
+            }
             AuthCommands::Create { username, password } => {
                 let response = client.create_account(&username, &password).await?;
                 println!("RESPONSE={:?}", response);
@@ -85,11 +104,18 @@ async fn run_command(cli: Cli, client: &mut dyn EnigmaAuthClient) -> Result<(), 
                 let response = client.get_session(&Uuid::parse_str(&access_token)?).await?;
                 println!("RESPONSE={:?}", response);
             }
+            AuthCommands::GetUserInfo { user_id } => {
+                let response = client.get_user_info(user_id.into()).await?;
+                println!("RESPONSE={:?}", response);
+            }
             AuthCommands::RefreshSession { refresh_token } => {
                 let response = client
                     .refresh_session(&Uuid::parse_str(&refresh_token)?)
                     .await?;
                 println!("RESPONSE={:?}", response);
+            }
+            AuthCommands::RemoveRole { user_id, role } => {
+                client.remove_role(user_id.into(), &role).await?;
             }
             AuthCommands::List => {
                 let response = client.list_accounts().await?;
@@ -107,6 +133,10 @@ async fn run_command(cli: Cli, client: &mut dyn EnigmaAuthClient) -> Result<(), 
                 create_test_users(client).await?;
             }
         },
+        Commands::Login { username, password } => {
+            let response = client.login(&username, &password).await?;
+            println!("RESPONSE={:?}", response);
+        }
     }
     Ok(())
 }

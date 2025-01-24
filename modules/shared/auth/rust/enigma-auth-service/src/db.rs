@@ -1,9 +1,9 @@
+use async_trait::async_trait;
 use chrono::Duration;
 use enigma_auth::{AccessToken, PasswordHash, RefreshToken, UserId, UserName};
 use std::error::Error;
 use std::net::IpAddr;
 use time::OffsetDateTime;
-use tonic::async_trait;
 
 #[cfg(test)]
 pub mod mock;
@@ -26,7 +26,16 @@ pub trait AuthDatabase: Send + Sync {
 
     async fn hash(&self, user_id: &UserId) -> Result<PasswordHash, Box<dyn Error>>;
 
+    async fn add_role(&self, user_id: &UserId, role: &str) -> Result<(), Box<dyn Error>>;
+
+    async fn remove_role(&self, user_id: &UserId, role: &str) -> Result<(), Box<dyn Error>>;
+
     async fn list_accounts(&self) -> Result<Vec<(UserId, UserName)>, Box<dyn Error>>;
+
+    async fn get_user_info(
+        &self,
+        user_id: &UserId,
+    ) -> Result<(UserId, UserName, Vec<String>), Box<dyn Error>>;
 
     async fn create_session(
         &self,

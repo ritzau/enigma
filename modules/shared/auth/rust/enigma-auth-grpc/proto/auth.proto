@@ -5,6 +5,9 @@ package auth;
 service Auth {
     rpc CreateAccount (CreateAccountRequest) returns (CreateAccountReply) {}
     rpc DeleteAccount (DeleteAccountRequest) returns (DeleteAccountReply) {}
+    rpc AddRole (AddRoleRequest) returns (AddRoleReply) {}
+    rpc RemoveRole (RemoveRoleRequest) returns (RemoveRoleReply) {}
+    rpc GetUserInfo (GetUserInfoRequest) returns (GetUserInfoReply) {}
     rpc ChangePassword (ChangePasswordRequest) returns (ChangePasswordReply) {}
     rpc RefreshSession (RefreshSessionRequest) returns (RefreshSessionReply) {}
     rpc Login (LoginRequest) returns (LoginReply) {}
@@ -27,6 +30,30 @@ message DeleteAccountRequest {
 }
 
 message DeleteAccountReply {
+}
+
+message AddRoleRequest {
+    int64 user_id = 1;
+    string role = 2;
+}
+
+message AddRoleReply {}
+
+message RemoveRoleRequest {
+    int64 user_id = 1;
+    string role = 2;
+}
+
+message RemoveRoleReply {}
+
+message GetUserInfoRequest {
+    int64 user_id = 1;
+}
+
+message GetUserInfoReply {
+    int64 user_id = 1;
+    string username = 2;
+    repeated string roles = 3;
 }
 
 message ChangePasswordRequest {
@@ -53,8 +80,9 @@ message LoginRequest {
 }
 
 message LoginReply {
-    string access_token = 1;
-    string refresh_token = 2;
+    int64 user_id = 1;
+    string access_token = 2;
+    string refresh_token = 3;
 }
 
 message ListAccountsRequest {
