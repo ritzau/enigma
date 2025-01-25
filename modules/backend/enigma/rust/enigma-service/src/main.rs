@@ -1,4 +1,4 @@
-use enigma_auth::{AccessToken, AuthExtension};
+use enigma_auth::{AccessToken, AuthExtension, UserId, UserName};
 use enigma_auth_grpc::auth_server::AuthServer;
 use enigma_auth_service::db::postgres::PostgresAuthDatabase;
 use enigma_auth_service::grpc::GrpcAuthService;
@@ -105,53 +105,50 @@ where
         let mut inner = self.inner.clone();
         let auth_service = self.auth_service.clone();
         Box::pin(async move {
-            let mut request = request;
-
-            if let Some(access_token) = get_access_token(&request) {
-                let session = auth_service
-                    .lock()
-                    .await
-                    .get_session(&access_token)
-                    .await
-                    .ok();
-                if let Some((is_valid, user_id)) = session {
-                    match (is_valid, user_id) {
-                        (true, Some(user_id)) => {
-                            if let Ok((_, username, roles)) =
-                                auth_service.lock().await.get_user_info(&user_id).await
-                            {
-                                request
-                                    .extensions_mut()
-                                    .insert(AuthExtension::Authenticated(user_id, username, roles));
-                            }
-                        }
-                        _ => {
-                            request.extensions_mut().insert(AuthExtension::Failed);
-                        }
-                    }
-                }
-            } else {
-                request.extensions_mut().insert(AuthExtension::Anonymous);
-            }
-
+            let request = process_request(auth_service, request).await;
             inner.call(request).await
         })
     }
 }
 
-fn get_access_token(request: &Request<BoxBody>) -> Option<AccessToken> {
-    if let Some(access_token_header) = request.headers().get("authorization") {
-        let access_token = access_token_header
-            .to_str()
-            .unwrap()
-            .strip_prefix("Bearer ")
-            .unwrap();
+async fn process_request(
+    auth_service: Arc<Mutex<impl EnigmaAuthService>>,
+    mut request: Request<BoxBody>,
+) -> Request<BoxBody> {
+    let Some(access_token) = get_access_token(&request) else {
+        request.extensions_mut().insert(AuthExtension::Anonymous);
+        return request;
+    };
 
-        match Uuid::parse_str(access_token) {
-            Ok(uuid) => Some(AccessToken::from(uuid)),
-            Err(_) => None,
-        }
-    } else {
-        None
-    }
+    let Some((user_id, username, roles)) = get_session(auth_service, &access_token).await else {
+        request.extensions_mut().insert(AuthExtension::Failed);
+        return request;
+    };
+
+    request
+        .extensions_mut()
+        .insert(AuthExtension::Authenticated(user_id, username, roles));
+
+    request
+}
+
+async fn get_session(
+    auth_service: Arc<Mutex<impl EnigmaAuthService + Sized>>,
+    access_token: &AccessToken,
+) -> Option<(UserId, UserName, Vec<String>)> {
+    let auth_service = auth_service.lock().await;
+
+    let user_id = match auth_service.get_session(access_token).await {
+        Ok((true, Some(user_id))) => user_id,
+        _ => return None,
+    };
+
+    auth_service.get_user_info(&user_id).await.ok()
+}
+
+fn get_access_token(request: &Request<BoxBody>) -> Option<AccessToken> {
+    let access_token_header = request.headers().get("authorization")?;
+    let access_token = access_token_header.to_str().ok()?.strip_prefix("Bearer ")?;
+    let uuid = Uuid::parse_str(access_token).ok()?;
+    Some(AccessToken::from(uuid))
 }
