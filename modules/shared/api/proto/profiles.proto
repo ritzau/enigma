@@ -7,13 +7,15 @@ service Profiles {
     rpc DeleteProfile (DeleteProfileRequest) returns (DeleteProfileReply);
     rpc GetProfile (GetProfileRequest) returns (GetProfileReply);
     rpc UpdateProfile (UpdateProfileRequest) returns (UpdateProfileReply);
+
+    rpc RequestConnection (RequestConnectionRequest) returns (RequestConnectionReply);
+    rpc AcceptConnection (AcceptConnectionRequest) returns (AcceptConnectionReply);
+    rpc RejectConnection (RejectConnectionRequest) returns (RejectConnectionReply);
+
     rpc GetConnections (GetConnectionsRequest) returns (GetConnectionsReply);
     rpc AddConnection (AddConnectionRequest) returns (AddConnectionReply);
     rpc RemoveConnection (RemoveConnectionRequest) returns (RemoveConnectionReply);
     rpc UpdateConnection (UpdateConnectionRequest) returns (UpdateConnectionReply);
-}
-
-service Connections {
 }
 
 message CreateProfileRequest {
@@ -43,6 +45,32 @@ message UpdateProfileRequest {
 }
 
 message UpdateProfileReply {
+}
+
+message RequestConnectionRequest {
+    int64 user_id = 1;
+    int64 connection_id = 2;
+    string kind = 3;
+}
+
+message RequestConnectionReply {
+}
+
+message AcceptConnectionRequest {
+    int64 user_id = 1;
+    int64 connection_id = 2;
+    string kind = 3;
+}
+
+message AcceptConnectionReply {
+}
+
+message RejectConnectionRequest {
+    int64 user_id = 1;
+    int64 connection_id = 2;
+}
+
+message RejectConnectionReply {
 }
 
 message GetConnectionsRequest {
@@ -91,4 +119,15 @@ message UserProfile {
     string profile_picture_url = 4;
     string primary_email = 5;
     int64 date_of_birth = 6;
+}
+
+enum ConnectionStatus {
+    CONNECTION_STATUS_UNSPECIFIED = 0;
+    CONNECTION_STATUS_REQUEST_SENT = 1;
+    CONNECTION_STATUS_REQUESTED = 2;
+    CONNECTION_STATUS_CONNECTED = 3;
+    CONNECTION_STATUS_DENIED = 4;
+    CONNECTION_STATUS_FOLLOWER = 5;
+    CONNECTION_STATUS_FOLLOWED = 6;
+    CONNECTION_STATUS_GHOST = 7;
 }

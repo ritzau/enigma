@@ -36,5 +36,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
 fn setup_logging() {
     tracing_subscriber::fmt()
         .with_span_events(FmtSpan::NEW | FmtSpan::CLOSE)
+        .with_writer(std::io::stderr)
         .init();
 }

@@ -19,10 +19,48 @@ pub trait EnigmaProfilesService {
 
     async fn update_profile(&self, profile: &EnigmaUserProfile) -> Result<(), DatabaseError>;
 
-    async fn get_connections(&self, user_id: &UserId);
-    async fn add_connection(&self, user_id: &UserId, connection_id: &UserId, kind: &str);
-    async fn remove_connection(&self, user_id: &UserId, connection_id: &UserId);
-    async fn update_connection(&self, user_id: &UserId, connection_id: &UserId, kind: &str);
+    async fn request_connection(
+        &self,
+        user_id: &UserId,
+        connection_id: &UserId,
+        kind: &str,
+    ) -> Result<(), DatabaseError>;
+
+    async fn accept_connection(
+        &self,
+        user_id: &UserId,
+        connection_id: &UserId,
+        kind: &str,
+    ) -> Result<(), DatabaseError>;
+
+    async fn reject_connection(
+        &self,
+        user_id: &UserId,
+        connection_id: &UserId,
+    ) -> Result<(), DatabaseError>;
+
+    async fn get_connections(
+        &self,
+        user_id: &UserId,
+    ) -> Result<Vec<(String, EnigmaUserProfile)>, DatabaseError>;
+    async fn add_connection(
+        &self,
+        user_id: &UserId,
+        connection_id: &UserId,
+        kind: &str,
+    ) -> Result<(), DatabaseError>;
+
+    async fn remove_connection(
+        &self,
+        user_id: &UserId,
+        connection_id: &UserId,
+    ) -> Result<(), DatabaseError>;
+    async fn update_connection(
+        &self,
+        user_id: &UserId,
+        connection_id: &UserId,
+        kind: &str,
+    ) -> Result<(), DatabaseError>;
 }
 
 pub struct DefaultProfilesService<DB>
@@ -59,19 +97,74 @@ where
         self.db.update_profile(profile).await
     }
 
-    async fn get_connections(&self, _user_id: &UserId) {
-        todo!()
+    async fn request_connection(
+        &self,
+        user_id: &UserId,
+        connection_id: &UserId,
+        kind: &str,
+    ) -> Result<(), DatabaseError> {
+        self.db
+            .request_connection(user_id, connection_id, kind)
+            .await
     }
 
-    async fn add_connection(&self, _user_id: &UserId, _connection_id: &UserId, _kind: &str) {
-        todo!()
+    async fn accept_connection(
+        &self,
+        user_id: &UserId,
+        connection_id: &UserId,
+        kind: &str,
+    ) -> Result<(), DatabaseError> {
+        self.db
+            .accept_connection(user_id, connection_id, kind)
+            .await
     }
 
-    async fn remove_connection(&self, _user_id: &UserId, _connection_id: &UserId) {
-        todo!()
+    async fn reject_connection(
+        &self,
+        user_id: &UserId,
+        connection_id: &UserId,
+    ) -> Result<(), DatabaseError> {
+        self.db.reject_connection(user_id, connection_id).await
     }
 
-    async fn update_connection(&self, _user_id: &UserId, _connection_id: &UserId, _kind: &str) {
-        todo!()
+    async fn get_connections(
+        &self,
+        user_id: &UserId,
+    ) -> Result<Vec<(String, EnigmaUserProfile)>, DatabaseError> {
+        self.db.get_connections(user_id).await
+    }
+
+    async fn add_connection(
+        &self,
+        user_id: &UserId,
+        connection_id: &UserId,
+        kind: &str,
+    ) -> Result<(), DatabaseError> {
+        if user_id == connection_id {
+            return Err(DatabaseError::CannotConnectToSelf(
+                "Cannot connect to self",
+                None,
+            ));
+        }
+        self.db.add_connection(user_id, connection_id, kind).await
+    }
+
+    async fn remove_connection(
+        &self,
+        user_id: &UserId,
+        connection_id: &UserId,
+    ) -> Result<(), DatabaseError> {
+        self.db.remove_connection(user_id, connection_id).await
+    }
+
+    async fn update_connection(
+        &self,
+        user_id: &UserId,
+        connection_id: &UserId,
+        kind: &str,
+    ) -> Result<(), DatabaseError> {
+        self.db
+            .update_connection(user_id, connection_id, kind)
+            .await
     }
 }
