@@ -2,7 +2,7 @@ use argon2::password_hash::rand_core::OsRng;
 use argon2::password_hash::SaltString;
 use argon2::{password_hash, Argon2, PasswordHasher, PasswordVerifier};
 use async_trait::async_trait;
-use chrono::Duration;
+use chrono::{Duration, Utc};
 use db::AuthDatabase;
 use enigma_auth::{AccessToken, PasswordHash, RefreshToken, UserId, UserName};
 use std::error::Error;
@@ -175,17 +175,14 @@ impl<T: AuthDatabase> EnigmaAuthService for DefaultAuthService<T> {
         access_token: &AccessToken,
     ) -> Result<(bool, Option<UserId>), Box<dyn Error>> {
         if let Ok((user_id, expires_at)) = self.db.session(access_token).await {
-            Ok((expires_at > time::OffsetDateTime::now_utc(), Some(user_id)))
+            Ok((expires_at > Utc::now(), Some(user_id)))
         } else {
             Ok((false, None))
         }
     }
 
     async fn purge_expired_sessions(&self) -> Result<u64, Box<dyn Error>> {
-        Ok(self
-            .db
-            .purge_expired_sessions(time::OffsetDateTime::now_utc())
-            .await?)
+        Ok(self.db.purge_expired_sessions(Utc::now()).await?)
     }
 }
 

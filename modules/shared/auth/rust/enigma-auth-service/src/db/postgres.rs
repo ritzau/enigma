@@ -1,14 +1,12 @@
 use crate::db::AuthDatabase;
 use async_trait::async_trait;
-use chrono::Duration;
 use chrono::Utc;
+use chrono::{DateTime, Duration};
 use enigma_auth::{AccessToken, PasswordHash, RefreshToken, UserId, UserName};
 use sqlx::{Pool, Postgres};
 use std::env;
 use std::error::Error;
 use std::net::IpAddr;
-use time::format_description::well_known::Rfc3339;
-use time::OffsetDateTime;
 use tracing::instrument;
 
 pub struct PostgresAuthDatabase {
@@ -196,10 +194,12 @@ impl AuthDatabase for PostgresAuthDatabase {
         remote_ip: Option<IpAddr>,
     ) -> Result<(AccessToken, RefreshToken), Box<dyn Error>> {
         let now = Utc::now();
-        let access_token_expiry =
-            OffsetDateTime::parse(&(now + access_ttl).to_rfc3339(), &Rfc3339)?;
-        let refresh_token_expiry =
-            OffsetDateTime::parse(&(now + refresh_ttl).to_rfc3339(), &Rfc3339)?;
+        let access_token_expiry = (now + access_ttl)
+            .to_rfc3339()
+            .parse::<chrono::DateTime<Utc>>()?;
+        let refresh_token_expiry = (now + refresh_ttl)
+            .to_rfc3339()
+            .parse::<chrono::DateTime<Utc>>()?;
 
         let record = sqlx::query!(
             "\
@@ -229,7 +229,7 @@ impl AuthDatabase for PostgresAuthDatabase {
     async fn session(
         &self,
         access_token: &AccessToken,
-    ) -> Result<(UserId, OffsetDateTime), Box<dyn Error>> {
+    ) -> Result<(UserId, DateTime<Utc>), Box<dyn Error>> {
         let row = sqlx::query!(
             "SELECT user_id, access_token_expiry FROM sessions WHERE access_token = $1 AND access_token_expiry > NOW()",
             access_token.value()
@@ -252,12 +252,8 @@ impl AuthDatabase for PostgresAuthDatabase {
         remote_ip: &Option<IpAddr>,
     ) -> Result<(AccessToken, RefreshToken), Box<dyn Error>> {
         let now = Utc::now();
-        let refresh_token_expiry = now + refresh_ttl;
-        let refresh_token_expiry =
-            OffsetDateTime::parse(&refresh_token_expiry.to_rfc3339(), &Rfc3339)?;
-        let access_token_expiry = now + access_ttl;
-        let access_token_expiry =
-            OffsetDateTime::parse(&access_token_expiry.to_rfc3339(), &Rfc3339)?;
+        let refresh_token_expiry = (now + refresh_ttl).to_rfc3339().parse::<DateTime<Utc>>()?;
+        let access_token_expiry = (now + access_ttl).to_rfc3339().parse::<DateTime<Utc>>()?;
 
         let record = sqlx::query!(
             "UPDATE sessions
@@ -284,7 +280,7 @@ impl AuthDatabase for PostgresAuthDatabase {
     }
 
     #[instrument(skip_all, err, fields(%now))]
-    async fn purge_expired_sessions(&self, now: OffsetDateTime) -> Result<u64, Box<dyn Error>> {
+    async fn purge_expired_sessions(&self, now: DateTime<Utc>) -> Result<u64, Box<dyn Error>> {
         let result = sqlx::query!("DELETE FROM sessions WHERE refresh_token_expiry < $1", now)
             .execute(&self.pool)
             .await?;

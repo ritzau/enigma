@@ -5,8 +5,6 @@ use enigma_auth::{AccessToken, PasswordHash, RefreshToken, UserId, UserName};
 use std::collections::{BTreeSet, HashMap};
 use std::error::Error;
 use std::net::IpAddr;
-use time::format_description::well_known::Rfc3339;
-use time::OffsetDateTime;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
@@ -170,7 +168,7 @@ impl AuthDatabase for MockAuthDatabase {
     async fn session(
         &self,
         access_token: &AccessToken,
-    ) -> Result<(UserId, OffsetDateTime), Box<dyn Error>> {
+    ) -> Result<(UserId, DateTime<Utc>), Box<dyn Error>> {
         let maps = self.maps.read().await;
 
         let (user_id, date_time) = maps
@@ -179,7 +177,7 @@ impl AuthDatabase for MockAuthDatabase {
             .cloned()
             .ok_or_else(|| Box::<dyn Error>::from("Session not found"))?;
 
-        Ok((user_id, chrono_to_offset(date_time)))
+        Ok((user_id, date_time))
     }
 
     async fn refresh_session(
@@ -210,29 +208,10 @@ impl AuthDatabase for MockAuthDatabase {
         Ok((new_access_token, new_refresh_token))
     }
 
-    async fn purge_expired_sessions(&self, now: OffsetDateTime) -> Result<u64, Box<dyn Error>> {
+    async fn purge_expired_sessions(&self, now: DateTime<Utc>) -> Result<u64, Box<dyn Error>> {
         let mut maps = self.maps.write().await;
         let initial_len = maps.sessions.len();
-        let now = offset_to_chrono(now);
         maps.sessions.retain(|_, (_, expires_at)| *expires_at > now);
         Ok((initial_len - maps.sessions.len()) as u64)
     }
-}
-
-fn chrono_to_offset(chrono_dt: DateTime<Utc>) -> OffsetDateTime {
-    // Convert chrono::DateTime to a string in RFC3339 format
-    let chrono_dt_str = chrono_dt.to_rfc3339();
-
-    // Parse the string back to time::OffsetDateTime
-    OffsetDateTime::parse(&chrono_dt_str, &Rfc3339).unwrap()
-}
-
-fn offset_to_chrono(offset_dt: OffsetDateTime) -> DateTime<Utc> {
-    // Convert time::OffsetDateTime to a string in RFC3339 format
-    let offset_dt_str = offset_dt.format(&Rfc3339).unwrap();
-
-    // Parse the string back to chrono::DateTime<Utc>
-    DateTime::parse_from_rfc3339(&offset_dt_str)
-        .unwrap()
-        .with_timezone(&Utc)
 }

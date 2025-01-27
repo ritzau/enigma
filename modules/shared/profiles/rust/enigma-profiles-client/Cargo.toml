@@ -1,0 +1,21 @@
+[package]
+name = "enigma-profiles-client"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+default = ["grpc"]
+grpc = ["dep:enigma-auth-client", "dep:enigma-auth-grpc", "dep:enigma-profiles-grpc"]
+
+[dependencies]
+async-trait = "0.1.85"
+enigma-auth = { path = "../../../auth/rust/enigma-auth" }
+enigma-auth-client = { path = "../../../auth/rust/enigma-auth-client", optional = true, features = ["grpc"] }
+enigma-auth-grpc = { path = "../../../auth/rust/enigma-auth-grpc", optional = true }
+enigma-profiles = { path = "../enigma-profiles" }
+enigma-profiles-grpc = { path = "../enigma-profiles-grpc", optional = true }
+http-body = "1.0.1"
+mockall = "0.13.1"
+tokio = "1.43.0"
+tonic = "0.12.3"
+tracing = "0.1.41"

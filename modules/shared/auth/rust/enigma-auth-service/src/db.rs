@@ -1,9 +1,8 @@
 use async_trait::async_trait;
-use chrono::Duration;
+use chrono::{DateTime, Duration, Utc};
 use enigma_auth::{AccessToken, PasswordHash, RefreshToken, UserId, UserName};
 use std::error::Error;
 use std::net::IpAddr;
-use time::OffsetDateTime;
 
 #[cfg(test)]
 pub mod mock;
@@ -48,7 +47,7 @@ pub trait AuthDatabase: Send + Sync {
     async fn session(
         &self,
         access_token: &AccessToken,
-    ) -> Result<(UserId, OffsetDateTime), Box<dyn Error>>;
+    ) -> Result<(UserId, DateTime<Utc>), Box<dyn Error>>;
 
     async fn refresh_session(
         &self,
@@ -58,5 +57,5 @@ pub trait AuthDatabase: Send + Sync {
         remote_ip: &Option<IpAddr>,
     ) -> Result<(AccessToken, RefreshToken), Box<dyn Error>>;
 
-    async fn purge_expired_sessions(&self, now: OffsetDateTime) -> Result<u64, Box<dyn Error>>;
+    async fn purge_expired_sessions(&self, now: DateTime<Utc>) -> Result<u64, Box<dyn Error>>;
 }

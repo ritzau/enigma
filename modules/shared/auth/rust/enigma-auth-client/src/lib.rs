@@ -8,7 +8,7 @@ use uuid::Uuid;
 pub mod grpc;
 
 pub mod authenticator;
-mod session;
+pub mod session;
 
 /// The `EnigmaAuthClient` trait provides asynchronous methods for creating accounts, deleting accounts,
 /// retrieving session information, listing accounts, logging in, and purging expired sessions.

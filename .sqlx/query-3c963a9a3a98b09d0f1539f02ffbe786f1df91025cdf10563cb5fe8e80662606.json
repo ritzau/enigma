@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE user_profiles\n            SET\n                legal_name = $2,\n                display_name = $3,\n                profile_picture_url = $4,\n                primary_email = $5,\n                date_of_birth = $6\n            WHERE user_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Date"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3c963a9a3a98b09d0f1539f02ffbe786f1df91025cdf10563cb5fe8e80662606"
+}
