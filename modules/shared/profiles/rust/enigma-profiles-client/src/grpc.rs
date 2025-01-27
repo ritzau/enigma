@@ -6,8 +6,13 @@ use enigma_auth_client::session::Session;
 use enigma_auth_grpc::auth_client::AuthClient;
 use enigma_profiles::EnigmaUserProfile;
 use enigma_profiles_grpc::profiles_client::ProfilesClient;
-use enigma_profiles_grpc::UserProfile;
+use enigma_profiles_grpc::{
+    AcceptConnectionRequest, AddConnectionRequest, CreateProfileRequest, DeleteProfileRequest,
+    GetConnectionsRequest, GetProfileRequest, RejectConnectionRequest, RemoveConnectionRequest,
+    RequestConnectionRequest, UpdateConnectionRequest, UpdateProfileRequest, UserProfile,
+};
 use http_body::Body;
+use itertools::Itertools;
 use std::error::Error;
 use std::path::Path;
 use std::sync::Arc;
@@ -17,8 +22,6 @@ use tonic::client::GrpcService;
 use tonic::codegen::{Bytes, StdError};
 use tonic::transport::Channel;
 use tracing::instrument;
-
-mod params;
 
 pub struct ProfilesGrpcClient<T>
 where
@@ -80,9 +83,13 @@ where
     <T::ResponseBody as Body>::Error: Into<StdError> + Send,
 {
     async fn create_profile(&self, profile: &EnigmaUserProfile) -> Result<(), Box<dyn Error>> {
+        let profile_message = UserProfile::try_from(profile)?;
+
         self.authenticator
             .authenticated_call(
-                || params::CreateProfileParameters(profile.clone()),
+                || CreateProfileRequest {
+                    profile: Some(profile_message.clone()),
+                },
                 |request| {
                     let client = self.client.clone();
                     async move { client.lock().await.create_profile(request).await }
@@ -97,7 +104,9 @@ where
     async fn delete_profile(&self, user_id: &UserId) -> Result<(), Box<dyn Error>> {
         self.authenticator
             .authenticated_call(
-                || params::DeleteProfileParameters(user_id.clone()),
+                || DeleteProfileRequest {
+                    user_id: user_id.value(),
+                },
                 |request| {
                     let client = self.client.clone();
                     async move { client.lock().await.delete_profile(request).await }
@@ -113,7 +122,9 @@ where
         let reply = self
             .authenticator
             .authenticated_call(
-                || params::GetProfileParameters(user_id.clone()),
+                || GetProfileRequest {
+                    user_id: user_id.value(),
+                },
                 |request| {
                     let client = self.client.clone();
                     async move { client.lock().await.get_profile(request).await }
@@ -127,9 +138,13 @@ where
     }
 
     async fn update_profile(&self, profile: &EnigmaUserProfile) -> Result<(), Box<dyn Error>> {
+        let profile_message = UserProfile::try_from(profile)?;
+
         self.authenticator
             .authenticated_call(
-                || params::UpdateProfileParameters(profile.clone()),
+                || UpdateProfileRequest {
+                    profile: Some(profile_message.clone()),
+                },
                 |request| {
                     let client = self.client.clone();
                     async move { client.lock().await.update_profile(request).await }
@@ -140,19 +155,172 @@ where
         Ok(())
     }
 
-    async fn get_connections(&self, _user_id: &UserId) {
-        todo!()
+    async fn request_connection(
+        &self,
+        user_id: &UserId,
+        connection_id: &UserId,
+        kind: &str,
+    ) -> Result<(), Box<dyn Error>> {
+        self.authenticator
+            .authenticated_call(
+                || RequestConnectionRequest {
+                    user_id: user_id.value(),
+                    connection_id: connection_id.value(),
+                    kind: kind.to_string(),
+                },
+                |request| {
+                    let client = self.client.clone();
+                    async move { client.lock().await.request_connection(request).await }
+                },
+            )
+            .await?;
+
+        Ok(())
     }
 
-    async fn add_connection(&self, _user_id: &UserId, _connection_id: &UserId, _kind: &str) {
-        todo!()
+    async fn accept_connection(
+        &self,
+        user_id: &UserId,
+        connection_id: &UserId,
+        kind: &str,
+    ) -> Result<(), Box<dyn Error>> {
+        self.authenticator
+            .authenticated_call(
+                || AcceptConnectionRequest {
+                    user_id: user_id.value(),
+                    connection_id: connection_id.value(),
+                    kind: kind.to_string(),
+                },
+                |request| {
+                    let client = self.client.clone();
+                    async move { client.lock().await.accept_connection(request).await }
+                },
+            )
+            .await?;
+
+        Ok(())
     }
 
-    async fn remove_connection(&self, _user_id: &UserId, _connection_id: &UserId) {
-        todo!()
+    async fn reject_connection(
+        &self,
+        user_id: &UserId,
+        connection_id: &UserId,
+    ) -> Result<(), Box<dyn Error>> {
+        self.authenticator
+            .authenticated_call(
+                || RejectConnectionRequest {
+                    user_id: user_id.value(),
+                    connection_id: connection_id.value(),
+                },
+                |request| {
+                    let client = self.client.clone();
+                    async move { client.lock().await.reject_connection(request).await }
+                },
+            )
+            .await?;
+
+        Ok(())
     }
 
-    async fn update_connection(&self, _user_id: &UserId, _connection_id: &UserId, _kind: &str) {
-        todo!()
+    async fn get_connections(
+        &self,
+        user_id: &UserId,
+    ) -> Result<Vec<(String, EnigmaUserProfile)>, Box<dyn Error>> {
+        let reply = self
+            .authenticator
+            .authenticated_call(
+                || GetConnectionsRequest {
+                    user_id: user_id.value(),
+                },
+                |request| {
+                    let client = self.client.clone();
+                    async move { client.lock().await.get_connections(request).await }
+                },
+            )
+            .await?;
+
+        Ok(reply
+            .into_inner()
+            .connections
+            .iter()
+            .map(|c| {
+                let Some(ref profile) = c.profile else {
+                    return Err("Missing profile");
+                };
+
+                let Ok(profile) = EnigmaUserProfile::try_from(profile) else {
+                    return Err("Invalid profile");
+                };
+
+                Ok((c.kind.clone(), profile))
+            })
+            .try_collect()?)
+    }
+
+    async fn add_connection(
+        &self,
+        user_id: &UserId,
+        connection_id: &UserId,
+        kind: &str,
+    ) -> Result<(), Box<dyn Error>> {
+        self.authenticator
+            .authenticated_call(
+                || AddConnectionRequest {
+                    user_id: user_id.value(),
+                    connection_user_id: connection_id.value(),
+                    kind: kind.to_string(),
+                },
+                |request| {
+                    let client = self.client.clone();
+                    async move { client.lock().await.add_connection(request).await }
+                },
+            )
+            .await?;
+
+        Ok(())
+    }
+
+    async fn remove_connection(
+        &self,
+        user_id: &UserId,
+        connection_id: &UserId,
+    ) -> Result<(), Box<dyn Error>> {
+        self.authenticator
+            .authenticated_call(
+                || RemoveConnectionRequest {
+                    user_id: user_id.value(),
+                    connection_user_id: connection_id.value(),
+                },
+                |request| {
+                    let client = self.client.clone();
+                    async move { client.lock().await.remove_connection(request).await }
+                },
+            )
+            .await?;
+
+        Ok(())
+    }
+
+    async fn update_connection(
+        &self,
+        user_id: &UserId,
+        connection_id: &UserId,
+        kind: &str,
+    ) -> Result<(), Box<dyn Error>> {
+        self.authenticator
+            .authenticated_call(
+                || UpdateConnectionRequest {
+                    user_id: user_id.value(),
+                    connection_user_id: connection_id.value(),
+                    kind: kind.to_string(),
+                },
+                |request| {
+                    let client = self.client.clone();
+                    async move { client.lock().await.update_connection(request).await }
+                },
+            )
+            .await?;
+
+        Ok(())
     }
 }

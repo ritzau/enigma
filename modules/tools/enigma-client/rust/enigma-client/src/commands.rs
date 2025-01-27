@@ -1,4 +1,5 @@
 use crate::commands::auth::AuthCommands;
+use crate::commands::connections::ConnectionCommands;
 use crate::commands::profiles::ProfilesCommands;
 use crate::Cli;
 use clap::Subcommand;
@@ -8,6 +9,7 @@ use std::error::Error;
 use tracing::instrument;
 
 pub(crate) mod auth;
+pub(crate) mod connections;
 pub(crate) mod profiles;
 
 #[derive(Debug, Subcommand)]
@@ -18,6 +20,8 @@ pub enum Commands {
         username: String,
         password: String,
     },
+    #[command(subcommand)]
+    Connections(ConnectionCommands),
     #[command(subcommand)]
     Profiles(ProfilesCommands),
 }
@@ -30,6 +34,9 @@ pub async fn run_command(
 ) -> Result<(), Box<dyn Error>> {
     match cli.command {
         Commands::Auth(command) => auth::run_command(auth_client, command).await?,
+        Commands::Connections(command) => {
+            connections::run_command(command, profiles_client).await?
+        }
         Commands::Login { username, password } => {
             let response = auth_client.login(&username, &password).await?;
             println!("RESPONSE={:?}", response);

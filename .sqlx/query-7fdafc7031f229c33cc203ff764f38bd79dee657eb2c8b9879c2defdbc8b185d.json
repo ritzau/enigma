@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT connection_id FROM connections\n         WHERE (user_id = $1 AND peer_id = $2)\n            OR (user_id = $2 AND peer_id = $1)\n         FOR UPDATE",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "connection_id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "7fdafc7031f229c33cc203ff764f38bd79dee657eb2c8b9879c2defdbc8b185d"
+}

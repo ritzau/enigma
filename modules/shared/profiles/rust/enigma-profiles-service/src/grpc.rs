@@ -1,12 +1,14 @@
 use crate::EnigmaProfilesService;
 use async_trait::async_trait;
-use enigma_auth::UserId;
-use enigma_auth_grpc::verify_admin;
+use enigma_auth::{Role, UserId};
+use enigma_auth_grpc::{verify_admin, verify_id_or_admin, verify_role};
 use enigma_profiles::EnigmaUserProfile;
 use enigma_profiles_grpc::profiles_server::Profiles;
 use enigma_profiles_grpc::{
-    AddConnectionReply, AddConnectionRequest, CreateProfileReply, CreateProfileRequest,
-    GetConnectionsReply, GetConnectionsRequest, RemoveConnectionReply, RemoveConnectionRequest,
+    AcceptConnectionReply, AcceptConnectionRequest, AddConnectionReply, AddConnectionRequest,
+    Connection, CreateProfileReply, CreateProfileRequest, GetConnectionsReply,
+    GetConnectionsRequest, RejectConnectionReply, RejectConnectionRequest, RemoveConnectionReply,
+    RemoveConnectionRequest, RequestConnectionReply, RequestConnectionRequest,
     UpdateConnectionReply, UpdateConnectionRequest,
 };
 use enigma_profiles_grpc::{
@@ -46,21 +48,20 @@ where
     ) -> Result<Response<CreateProfileReply>, Status> {
         verify_admin(&request).await?;
 
-        let request = request.into_inner();
-
-        let profile_message: enigma_profiles_grpc::UserProfile = request
+        let parameters = request.get_ref();
+        let profile_message = parameters
             .profile
+            .as_ref()
             .ok_or_else(|| Status::invalid_argument("Missing profile"))?;
 
         let profile = EnigmaUserProfile::try_from(profile_message)?;
 
-        {
-            let service = self.profiles_service.lock().await;
-            service
-                .create_profile(&profile)
-                .await
-                .map_err(|_| Status::invalid_argument("Invalid user"))?;
-        }
+        self.profiles_service
+            .lock()
+            .await
+            .create_profile(&profile)
+            .await
+            .map_err(|_| Status::invalid_argument("Invalid user"))?;
 
         Ok(Response::new(CreateProfileReply {}))
     }
@@ -69,15 +70,17 @@ where
         &self,
         request: Request<DeleteProfileRequest>,
     ) -> Result<Response<DeleteProfileReply>, Status> {
-        verify_admin(&request).await?;
+        let parameters = request.get_ref();
+        let user_id = UserId::from(parameters.user_id);
 
-        {
-            let service = self.profiles_service.lock().await;
-            service
-                .delete_profile(&UserId::from(request.get_ref().user_id))
-                .await
-                .map_err(|_| Status::invalid_argument("Invalid user"))?;
-        }
+        verify_id_or_admin(&request, &user_id).await?;
+
+        self.profiles_service
+            .lock()
+            .await
+            .delete_profile(&user_id)
+            .await
+            .map_err(|_| Status::invalid_argument("Invalid user"))?;
 
         Ok(Response::new(DeleteProfileReply {}))
     }
@@ -87,18 +90,18 @@ where
         &self,
         request: Request<GetProfileRequest>,
     ) -> Result<Response<GetProfileReply>, Status> {
-        verify_admin(&request).await?;
+        verify_role(&request, &Role::User).await?;
 
-        let request = request.get_ref();
-        let user_id = UserId::from(request.user_id);
+        let parameters = request.get_ref();
+        let user_id = UserId::from(parameters.user_id);
 
-        let profile = {
-            let service = self.profiles_service.lock().await;
-            service
-                .get_profile(&user_id)
-                .await
-                .map_err(|_| Status::invalid_argument("Invalid user"))?
-        };
+        let profile = self
+            .profiles_service
+            .lock()
+            .await
+            .get_profile(&user_id)
+            .await
+            .map_err(|_| Status::invalid_argument("Invalid user"))?;
 
         let reply = GetProfileReply {
             profile: Some(profile.try_into()?),
@@ -107,54 +110,181 @@ where
         Ok(Response::new(reply))
     }
 
+    #[instrument(err, skip_all)]
     async fn update_profile(
         &self,
         request: Request<UpdateProfileRequest>,
     ) -> Result<Response<UpdateProfileReply>, Status> {
-        verify_admin(&request).await?;
-
-        let profile_message = request
-            .into_inner()
+        let parameters = request.get_ref();
+        let profile_message = parameters
             .profile
+            .as_ref()
             .ok_or_else(|| Status::invalid_argument("Missing profile"))?;
         let profile = enigma_profiles::EnigmaUserProfile::try_from(profile_message)?;
 
-        {
-            let service = self.profiles_service.lock().await;
-            service
-                .update_profile(&profile)
-                .await
-                .map_err(|_| Status::invalid_argument("Invalid user"))?;
-        }
+        verify_id_or_admin(&request, &profile.user_id).await?;
+
+        self.profiles_service
+            .lock()
+            .await
+            .update_profile(&profile)
+            .await
+            .map_err(|_| Status::invalid_argument("Invalid user"))?;
 
         Ok(Response::new(UpdateProfileReply {}))
     }
 
+    async fn request_connection(
+        &self,
+        request: Request<RequestConnectionRequest>,
+    ) -> Result<Response<RequestConnectionReply>, Status> {
+        let parameters = request.get_ref();
+        let user_id = UserId::from(parameters.user_id);
+        let connection_id = UserId::from(parameters.connection_id);
+        let kind = &parameters.kind;
+
+        verify_id_or_admin(&request, &user_id).await?;
+
+        self.profiles_service
+            .lock()
+            .await
+            .request_connection(&user_id, &connection_id, kind)
+            .await
+            .map_err(|_| Status::invalid_argument("Cannot request connection"))?;
+
+        Ok(Response::new(RequestConnectionReply {}))
+    }
+
+    async fn accept_connection(
+        &self,
+        request: Request<AcceptConnectionRequest>,
+    ) -> Result<Response<AcceptConnectionReply>, Status> {
+        let parameters = request.get_ref();
+        let user_id = UserId::from(parameters.user_id);
+        let connection_id = UserId::from(parameters.connection_id);
+        let kind = &parameters.kind;
+
+        verify_id_or_admin(&request, &user_id).await?;
+
+        self.profiles_service
+            .lock()
+            .await
+            .accept_connection(&user_id, &connection_id, kind)
+            .await
+            .map_err(|_| Status::invalid_argument("Cannot request connection"))?;
+
+        Ok(Response::new(AcceptConnectionReply {}))
+    }
+
+    async fn reject_connection(
+        &self,
+        request: Request<RejectConnectionRequest>,
+    ) -> Result<Response<RejectConnectionReply>, Status> {
+        let parameters = request.get_ref();
+        let user_id = UserId::from(parameters.user_id);
+        let connection_id = UserId::from(parameters.connection_id);
+
+        verify_id_or_admin(&request, &user_id).await?;
+
+        self.profiles_service
+            .lock()
+            .await
+            .reject_connection(&user_id, &connection_id)
+            .await
+            .map_err(|_| Status::invalid_argument("Cannot reject connection"))?;
+
+        Ok(Response::new(RejectConnectionReply {}))
+    }
+
+    #[instrument(err, skip_all)]
     async fn get_connections(
         &self,
-        _request: Request<GetConnectionsRequest>,
+        request: Request<GetConnectionsRequest>,
     ) -> Result<Response<GetConnectionsReply>, Status> {
-        todo!()
+        let parameters = request.get_ref();
+        let user_id = UserId::from(parameters.user_id);
+
+        verify_id_or_admin(&request, &user_id).await?;
+
+        let connections = self
+            .profiles_service
+            .lock()
+            .await
+            .get_connections(&user_id)
+            .await
+            .map_err(|_| Status::internal("Cannot get connections"))?
+            .into_iter()
+            .map(|(kind, profile)| Connection {
+                kind,
+                profile: Some(profile.try_into().unwrap()),
+            })
+            .collect();
+
+        Ok(Response::new(GetConnectionsReply { connections }))
     }
 
+    #[instrument(err, skip_all)]
     async fn add_connection(
         &self,
-        _request: Request<AddConnectionRequest>,
+        request: Request<AddConnectionRequest>,
     ) -> Result<Response<AddConnectionReply>, Status> {
-        todo!()
+        let parameters = request.get_ref();
+        let user_id = UserId::from(parameters.user_id);
+        let connection_id = UserId::from(parameters.connection_user_id);
+        let kind = &parameters.kind;
+
+        verify_id_or_admin(&request, &user_id).await?;
+
+        self.profiles_service
+            .lock()
+            .await
+            .add_connection(&user_id, &connection_id, kind)
+            .await
+            .map_err(|_| Status::invalid_argument("Cannot add connection"))?;
+
+        Ok(Response::new(AddConnectionReply {}))
     }
 
+    #[instrument(err, skip_all)]
     async fn remove_connection(
         &self,
-        _request: Request<RemoveConnectionRequest>,
+        request: Request<RemoveConnectionRequest>,
     ) -> Result<Response<RemoveConnectionReply>, Status> {
-        todo!()
+        let parameters = request.get_ref();
+        let user_id = UserId::from(parameters.user_id);
+        let connection_id = UserId::from(parameters.connection_user_id);
+
+        verify_id_or_admin(&request, &user_id).await?;
+
+        self.profiles_service
+            .lock()
+            .await
+            .remove_connection(&user_id, &connection_id)
+            .await
+            .map_err(|_| Status::invalid_argument("Cannot remove connection"))?;
+
+        Ok(Response::new(RemoveConnectionReply {}))
     }
 
+    #[instrument(err, skip_all)]
     async fn update_connection(
         &self,
-        _request: Request<UpdateConnectionRequest>,
+        request: Request<UpdateConnectionRequest>,
     ) -> Result<Response<UpdateConnectionReply>, Status> {
-        todo!()
+        let parameters = request.get_ref();
+        let user_id = UserId::from(parameters.user_id);
+        let connection_id = UserId::from(parameters.connection_user_id);
+        let kind = &parameters.kind;
+
+        verify_id_or_admin(&request, &user_id).await?;
+
+        self.profiles_service
+            .lock()
+            .await
+            .update_connection(&user_id, &connection_id, kind)
+            .await
+            .map_err(|_| Status::invalid_argument("Cannot update connection"))?;
+
+        Ok(Response::new(UpdateConnectionReply {}))
     }
 }

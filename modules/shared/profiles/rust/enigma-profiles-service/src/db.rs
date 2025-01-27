@@ -10,6 +10,8 @@ pub mod postgres;
 pub enum DatabaseError {
     IllegalState(&'static str, Option<Box<dyn Error>>),
     InvalidUser(&'static str, Option<Box<dyn Error>>),
+    NotFound(&'static str, Option<Box<dyn Error>>),
+    CannotConnectToSelf(&'static str, Option<Box<dyn Error>>),
 }
 
 impl Error for DatabaseError {}
@@ -17,8 +19,17 @@ impl Error for DatabaseError {}
 impl Display for DatabaseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            DatabaseError::IllegalState(msg, _) | DatabaseError::InvalidUser(msg, _) => {
+            DatabaseError::IllegalState(msg, None)
+            | DatabaseError::InvalidUser(msg, None)
+            | DatabaseError::NotFound(msg, None)
+            | DatabaseError::CannotConnectToSelf(msg, None) => {
                 write!(f, "{}", msg)
+            }
+            DatabaseError::IllegalState(msg, Some(err))
+            | DatabaseError::InvalidUser(msg, Some(err))
+            | DatabaseError::NotFound(msg, Some(err))
+            | DatabaseError::CannotConnectToSelf(msg, Some(err)) => {
+                write!(f, "{} ({})", msg, err)
             }
         }
     }
@@ -30,4 +41,46 @@ pub trait EnigmaProfilesDatabase {
     async fn delete_profile(&self, user_id: &UserId) -> Result<(), DatabaseError>;
     async fn get_profile(&self, user_id: &UserId) -> Result<EnigmaUserProfile, DatabaseError>;
     async fn update_profile(&self, profile: &EnigmaUserProfile) -> Result<(), DatabaseError>;
+
+    async fn request_connection(
+        &self,
+        user_id: &UserId,
+        connection_id: &UserId,
+        kind: &str,
+    ) -> Result<(), DatabaseError>;
+
+    async fn accept_connection(
+        &self,
+        user_id: &UserId,
+        connection_id: &UserId,
+        kind: &str,
+    ) -> Result<(), DatabaseError>;
+
+    async fn reject_connection(
+        &self,
+        user_id: &UserId,
+        connection_id: &UserId,
+    ) -> Result<(), DatabaseError>;
+
+    async fn add_connection(
+        &self,
+        user_id: &UserId,
+        connection_id: &UserId,
+        kind: &str,
+    ) -> Result<(), DatabaseError>;
+    async fn get_connections(
+        &self,
+        user_id: &UserId,
+    ) -> Result<Vec<(String, EnigmaUserProfile)>, DatabaseError>;
+    async fn remove_connection(
+        &self,
+        user_id: &UserId,
+        connection_id: &UserId,
+    ) -> Result<(), DatabaseError>;
+    async fn update_connection(
+        &self,
+        user_id: &UserId,
+        connection_id: &UserId,
+        kind: &str,
+    ) -> Result<(), DatabaseError>;
 }
