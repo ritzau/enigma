@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "modules/backend/enigma/rust/*",
     "modules/shared/auth/rust/*",
+    "modules/shared/profiles/rust/*",
     "modules/tools/enigma-client/rust/*",
 ]
 

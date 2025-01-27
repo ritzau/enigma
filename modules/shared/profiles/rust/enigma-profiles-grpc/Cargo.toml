@@ -1,13 +1,13 @@
 [package]
-name = "enigma-auth-grpc"
+name = "enigma-profiles-grpc"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-enigma-auth = { path = "../enigma-auth" }
-log = "0.4.25"
-prost = "0.13.4"
+chrono = "0.4.39"
+enigma-profiles = { path = "../enigma-profiles" }
 tonic = "0.12.3"
+prost = "0.13.4"
 
 [build-dependencies]
 tonic-build = "0.12.3"

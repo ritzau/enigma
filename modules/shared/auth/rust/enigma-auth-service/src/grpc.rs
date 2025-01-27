@@ -1,11 +1,11 @@
 use crate::EnigmaAuthService;
 use async_trait::async_trait;
-use enigma_auth::{AuthExtension, RefreshToken, UserId, UserName};
+use enigma_auth::{RefreshToken, UserId};
 use enigma_auth_grpc::{
-    auth_server, AddRoleReply, AddRoleRequest, ChangePasswordReply, ChangePasswordRequest,
-    CreateAccountReply, CreateAccountRequest, DeleteAccountReply, DeleteAccountRequest,
-    GetSessionReply, GetSessionRequest, GetUserInfoReply, GetUserInfoRequest, ListAccountsReply,
-    ListAccountsRequest, LoginReply, LoginRequest, PurgeExpiredSessionsReply,
+    auth_server, verify_admin, AddRoleReply, AddRoleRequest, ChangePasswordReply,
+    ChangePasswordRequest, CreateAccountReply, CreateAccountRequest, DeleteAccountReply,
+    DeleteAccountRequest, GetSessionReply, GetSessionRequest, GetUserInfoReply, GetUserInfoRequest,
+    ListAccountsReply, ListAccountsRequest, LoginReply, LoginRequest, PurgeExpiredSessionsReply,
     PurgeExpiredSessionsRequest, RefreshSessionReply, RefreshSessionRequest, RemoveRoleReply,
     RemoveRoleRequest, User,
 };
@@ -13,7 +13,7 @@ use sqlx::types::Uuid;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tonic::{Request, Response, Status};
-use tracing::{info, instrument};
+use tracing::instrument;
 
 pub struct GrpcAuthService<T: EnigmaAuthService> {
     auth_service: Arc<Mutex<T>>,
@@ -22,62 +22,6 @@ pub struct GrpcAuthService<T: EnigmaAuthService> {
 impl<T: EnigmaAuthService> GrpcAuthService<T> {
     pub fn new(auth_service: Arc<Mutex<T>>) -> Self {
         GrpcAuthService { auth_service }
-    }
-
-    #[allow(dead_code)]
-    async fn verify_anonymous<R>(&self, request: &Request<R>) -> Result<(), Status> {
-        match request.extensions().get::<AuthExtension>() {
-            Some(ext) => match ext {
-                AuthExtension::Authenticated(..) => {
-                    Err(Status::permission_denied("Permission denied"))
-                }
-                AuthExtension::Failed => Err(Status::unauthenticated("Invalid access token")),
-                AuthExtension::Anonymous => Ok(()),
-            },
-            None => Err(Status::internal("Internal error")),
-        }
-    }
-
-    async fn verify_auth<R>(
-        &self,
-        request: &Request<R>,
-    ) -> Result<(UserId, UserName, Vec<String>), Status> {
-        match request.extensions().get::<AuthExtension>() {
-            Some(ext) => match ext {
-                AuthExtension::Authenticated(user_id, username, roles) => {
-                    info!(
-                        "Authenticated user: {}/{}/{}",
-                        user_id,
-                        username,
-                        roles.join(", ")
-                    );
-                    Ok((user_id.clone(), username.clone(), roles.clone()))
-                }
-                AuthExtension::Failed => Err(Status::unauthenticated("Invalid access token")),
-                AuthExtension::Anonymous => Err(Status::permission_denied("Permission denied")),
-            },
-            None => Err(Status::internal("Internal error")),
-        }
-    }
-
-    async fn verify_role<R>(
-        &self,
-        request: &Request<R>,
-        role: &str,
-    ) -> Result<(UserId, UserName, Vec<String>), Status> {
-        let (user_id, username, roles) = self.verify_auth(request).await?;
-        if roles.contains(&role.to_string()) {
-            Ok((user_id, username, roles))
-        } else {
-            Err(Status::permission_denied("Permission denied"))
-        }
-    }
-
-    async fn verify_admin<R>(
-        &self,
-        request: &Request<R>,
-    ) -> Result<(UserId, UserName, Vec<String>), Status> {
-        self.verify_role(request, "admin").await
     }
 }
 
@@ -119,7 +63,7 @@ impl<T: EnigmaAuthService + 'static> auth_server::Auth for GrpcAuthService<T> {
         &self,
         request: Request<DeleteAccountRequest>,
     ) -> Result<Response<DeleteAccountReply>, Status> {
-        self.verify_admin(&request).await?;
+        verify_admin(&request).await?;
 
         let request = request.get_ref();
         match self
@@ -145,7 +89,7 @@ impl<T: EnigmaAuthService + 'static> auth_server::Auth for GrpcAuthService<T> {
         &self,
         request: Request<AddRoleRequest>,
     ) -> Result<Response<AddRoleReply>, Status> {
-        self.verify_admin(&request).await?;
+        verify_admin(&request).await?;
 
         let request = request.into_inner();
         let service = self.auth_service.lock().await;
@@ -168,7 +112,7 @@ impl<T: EnigmaAuthService + 'static> auth_server::Auth for GrpcAuthService<T> {
         &self,
         request: Request<RemoveRoleRequest>,
     ) -> Result<Response<RemoveRoleReply>, Status> {
-        self.verify_admin(&request).await?;
+        verify_admin(&request).await?;
 
         let request = request.into_inner();
         let service = self.auth_service.lock().await;
@@ -190,7 +134,7 @@ impl<T: EnigmaAuthService + 'static> auth_server::Auth for GrpcAuthService<T> {
         &self,
         request: Request<GetUserInfoRequest>,
     ) -> Result<Response<GetUserInfoReply>, Status> {
-        self.verify_admin(&request).await?;
+        verify_admin(&request).await?;
 
         let request = request.get_ref();
         let (user_id, username, roles) = self
@@ -293,7 +237,7 @@ impl<T: EnigmaAuthService + 'static> auth_server::Auth for GrpcAuthService<T> {
         &self,
         request: Request<ListAccountsRequest>,
     ) -> Result<Response<ListAccountsReply>, Status> {
-        self.verify_admin(&request).await?;
+        verify_admin(&request).await?;
 
         match self.auth_service.lock().await.list_accounts().await {
             Ok(users) => {
@@ -319,7 +263,7 @@ impl<T: EnigmaAuthService + 'static> auth_server::Auth for GrpcAuthService<T> {
         &self,
         request: Request<GetSessionRequest>,
     ) -> Result<Response<GetSessionReply>, Status> {
-        self.verify_admin(&request).await?;
+        verify_admin(&request).await?;
 
         let request = request.get_ref();
         let access_token =
@@ -349,7 +293,7 @@ impl<T: EnigmaAuthService + 'static> auth_server::Auth for GrpcAuthService<T> {
         &self,
         request: Request<PurgeExpiredSessionsRequest>,
     ) -> Result<Response<PurgeExpiredSessionsReply>, Status> {
-        self.verify_admin(&request).await?;
+        verify_admin(&request).await?;
 
         let purged_session_count = self
             .auth_service

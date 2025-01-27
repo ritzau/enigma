@@ -4,8 +4,12 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+chrono = "0.4.39"
 clap = { version = "4.5.26", features = ["derive"] }
 enigma-auth-client = { path = "../../../../shared/auth/rust/enigma-auth-client", features = ["grpc"] }
+enigma-auth-grpc = { path = "../../../../shared/auth/rust/enigma-auth-grpc" }
+enigma-profiles = { path = "../../../../shared/profiles/rust/enigma-profiles" }
+enigma-profiles-client = { path = "../../../../shared/profiles/rust/enigma-profiles-client", features = ["grpc"] }
 enigma-auth= { path = "../../../../shared/auth/rust/enigma-auth" }
 mockall = "0.13.1"
 tokio = { version = "1.43.0", features = ["rt-multi-thread"] }

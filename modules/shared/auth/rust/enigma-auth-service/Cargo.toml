@@ -14,8 +14,7 @@ chrono = "0.4.39"
 dotenvy = "0.15.7"
 enigma-auth = { path = "../enigma-auth" }
 enigma-auth-grpc = { path = "../enigma-auth-grpc", optional = true }
-sqlx = { version = "0.8.3", features = ["postgres", "runtime-tokio-native-tls", "time", "uuid"] }
-time = "0.3.37"
+sqlx = { version = "0.8.3", features = ["chrono", "postgres", "runtime-tokio-native-tls", "uuid"] }
 tokio = "1.43.0"
 tonic = "0.12.3"
 tracing = "0.1.41"

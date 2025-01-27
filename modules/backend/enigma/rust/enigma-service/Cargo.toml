@@ -7,6 +7,8 @@ edition = "2021"
 enigma-auth-grpc= { path = "../../../../shared/auth/rust/enigma-auth-grpc" }
 enigma-auth-service = { path = "../../../../shared/auth/rust/enigma-auth-service", features = ["grpc"] }
 enigma-auth= { path = "../../../../shared/auth/rust/enigma-auth" }
+enigma-profiles-grpc = { path = "../../../../shared/profiles/rust/enigma-profiles-grpc" }
+enigma-profiles-service = { path = "../../../../shared/profiles/rust/enigma-profiles-service", features = ["grpc"] }
 http-body = "1.0.1"
 http-body-util = "0.1.2"
 tokio = { version = "1.43.0", features = ["rt-multi-thread"] }

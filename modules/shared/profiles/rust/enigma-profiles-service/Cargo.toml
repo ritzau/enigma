@@ -1,0 +1,20 @@
+[package]
+name = "enigma-profiles-service"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+default = ["grpc"]
+grpc = ["dep:enigma-auth-grpc", "dep:enigma-profiles-grpc"]
+
+[dependencies]
+async-trait = "0.1.85"
+dotenv = "0.15.0"
+enigma-auth = { path = "../../../auth/rust/enigma-auth" }
+enigma-auth-grpc = { path = "../../../auth/rust/enigma-auth-grpc", optional = true }
+enigma-profiles = { path = "../enigma-profiles" }
+enigma-profiles-grpc = { path = "../enigma-profiles-grpc", optional = true }
+sqlx = { version = "0.8.3", features = ["chrono", "postgres", "runtime-tokio-native-tls", "uuid"] }
+tokio = "1.43.0"
+tonic = "0.12.3"
+tracing = "0.1.41"
