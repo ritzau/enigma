@@ -3,14 +3,14 @@ syntax = "proto3";
 package profiles;
 
 service Profiles {
-    rpc CreateProfile (CreateProfileRequest) returns (CreateProfileReply) {}
-    rpc DeleteProfile (DeleteProfileRequest) returns (DeleteProfileReply) {}
-    rpc GetProfile (GetProfileRequest) returns (GetProfileReply) {}
-    rpc UpdateProfile (UpdateProfileRequest) returns (UpdateProfileReply) {}
-    rpc GetConnections (GetConnectionsRequest) returns (GetConnectionsReply) {}
-    rpc AddConnection (AddConnectionRequest) returns (AddConnectionReply) {}
-    rpc RemoveConnection (RemoveConnectionRequest) returns (RemoveConnectionReply) {}
-    rpc UpdateConnection (UpdateConnectionRequest) returns (UpdateConnectionReply) {}
+    rpc CreateProfile (CreateProfileRequest) returns (CreateProfileReply);
+    rpc DeleteProfile (DeleteProfileRequest) returns (DeleteProfileReply);
+    rpc GetProfile (GetProfileRequest) returns (GetProfileReply);
+    rpc UpdateProfile (UpdateProfileRequest) returns (UpdateProfileReply);
+    rpc GetConnections (GetConnectionsRequest) returns (GetConnectionsReply);
+    rpc AddConnection (AddConnectionRequest) returns (AddConnectionReply);
+    rpc RemoveConnection (RemoveConnectionRequest) returns (RemoveConnectionReply);
+    rpc UpdateConnection (UpdateConnectionRequest) returns (UpdateConnectionReply);
 }
 
 service Connections {
