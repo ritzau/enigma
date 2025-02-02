@@ -3,17 +3,17 @@ syntax = "proto3";
 package auth;
 
 service Auth {
-    rpc CreateAccount (CreateAccountRequest) returns (CreateAccountReply) {}
-    rpc DeleteAccount (DeleteAccountRequest) returns (DeleteAccountReply) {}
-    rpc AddRole (AddRoleRequest) returns (AddRoleReply) {}
-    rpc RemoveRole (RemoveRoleRequest) returns (RemoveRoleReply) {}
-    rpc GetUserInfo (GetUserInfoRequest) returns (GetUserInfoReply) {}
-    rpc ChangePassword (ChangePasswordRequest) returns (ChangePasswordReply) {}
-    rpc RefreshSession (RefreshSessionRequest) returns (RefreshSessionReply) {}
-    rpc Login (LoginRequest) returns (LoginReply) {}
-    rpc ListAccounts (ListAccountsRequest) returns (ListAccountsReply) {}
-    rpc GetSession (GetSessionRequest) returns (GetSessionReply) {}
-    rpc PurgeExpiredSessions (PurgeExpiredSessionsRequest) returns (PurgeExpiredSessionsReply) {}
+    rpc CreateAccount (CreateAccountRequest) returns (CreateAccountReply);
+    rpc DeleteAccount (DeleteAccountRequest) returns (DeleteAccountReply);
+    rpc AddRole (AddRoleRequest) returns (AddRoleReply);
+    rpc RemoveRole (RemoveRoleRequest) returns (RemoveRoleReply);
+    rpc GetUserInfo (GetUserInfoRequest) returns (GetUserInfoReply);
+    rpc ChangePassword (ChangePasswordRequest) returns (ChangePasswordReply);
+    rpc RefreshSession (RefreshSessionRequest) returns (RefreshSessionReply);
+    rpc Login (LoginRequest) returns (LoginReply);
+    rpc ListAccounts (ListAccountsRequest) returns (ListAccountsReply);
+    rpc GetSession (GetSessionRequest) returns (GetSessionReply);
+    rpc PurgeExpiredSessions (PurgeExpiredSessionsRequest) returns (PurgeExpiredSessionsReply);
 }
 
 message CreateAccountRequest {
