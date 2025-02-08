@@ -10,7 +10,7 @@
 //! - `AccessToken`: Represents an access token.
 
 use serde::{Deserialize, Serialize};
-use std::fmt::Display;
+use std::fmt::{Display, Formatter};
 use uuid::Uuid;
 
 /// Represents a user ID.
@@ -172,6 +172,33 @@ pub enum AuthExtension {
     Anonymous,
     Authenticated(UserId, UserName, Vec<String>),
     Failed,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum Role {
+    Admin,
+    User,
+}
+
+impl TryFrom<&str> for Role {
+    type Error = Box<dyn std::error::Error>;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "admin" => Ok(Role::Admin),
+            "user" => Ok(Role::User),
+            _ => Err("Invalid role".into()),
+        }
+    }
+}
+
+impl Display for Role {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Role::Admin => write!(f, "admin"),
+            Role::User => write!(f, "user"),
+        }
+    }
 }
 
 #[cfg(test)]

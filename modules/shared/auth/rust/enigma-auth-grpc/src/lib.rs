@@ -1,4 +1,5 @@
-use enigma_auth::{AuthExtension, UserId, UserName};
+use enigma_auth::{AuthExtension, Role, UserId, UserName};
+use itertools::Itertools;
 use log::info;
 use tonic::{Request, Status};
 
@@ -16,9 +17,7 @@ pub async fn verify_anonymous<R>(request: &Request<R>) -> Result<(), Status> {
     }
 }
 
-pub async fn verify_auth<R>(
-    request: &Request<R>,
-) -> Result<(UserId, UserName, Vec<String>), Status> {
+pub async fn verify_auth<R>(request: &Request<R>) -> Result<(UserId, UserName, Vec<Role>), Status> {
     match request.extensions().get::<AuthExtension>() {
         Some(ext) => match ext {
             AuthExtension::Authenticated(user_id, username, roles) => {
@@ -28,7 +27,12 @@ pub async fn verify_auth<R>(
                     username,
                     roles.join(", ")
                 );
-                Ok((user_id.clone(), username.clone(), roles.clone()))
+                let roles = roles
+                    .iter()
+                    .map(|r| Role::try_from(r.as_str()))
+                    .try_collect()
+                    .map_err(|_| Status::internal("Failed to process roles"))?;
+                Ok((user_id.clone(), username.clone(), roles))
             }
             AuthExtension::Failed => Err(Status::unauthenticated("Invalid access token")),
             AuthExtension::Anonymous => Err(Status::permission_denied("Permission denied")),
@@ -39,10 +43,10 @@ pub async fn verify_auth<R>(
 
 pub async fn verify_role<R>(
     request: &Request<R>,
-    role: &str,
-) -> Result<(UserId, UserName, Vec<String>), Status> {
+    role: &Role,
+) -> Result<(UserId, UserName, Vec<Role>), Status> {
     let (user_id, username, roles) = verify_auth(request).await?;
-    if roles.contains(&role.to_string()) {
+    if roles.contains(role) {
         Ok((user_id, username, roles))
     } else {
         Err(Status::permission_denied("Permission denied"))
@@ -51,6 +55,18 @@ pub async fn verify_role<R>(
 
 pub async fn verify_admin<R>(
     request: &Request<R>,
-) -> Result<(UserId, UserName, Vec<String>), Status> {
-    verify_role(request, "admin").await
+) -> Result<(UserId, UserName, Vec<Role>), Status> {
+    verify_role(request, &Role::Admin).await
+}
+
+pub async fn verify_id_or_admin<R>(
+    request: &Request<R>,
+    user_id: &UserId,
+) -> Result<(UserId, UserName, Vec<Role>), Status> {
+    let (req_user_id, req_username, req_roles) = verify_auth(request).await?;
+    if user_id == &req_user_id || req_roles.contains(&Role::Admin) {
+        Ok((req_user_id, req_username, req_roles))
+    } else {
+        Err(Status::permission_denied("Permission denied"))
+    }
 }
