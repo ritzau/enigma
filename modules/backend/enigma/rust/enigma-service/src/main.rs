@@ -1,11 +1,13 @@
 use enigma_auth_grpc::auth_server::AuthServer;
 use enigma_auth_service::db::postgres::PostgresAuthDatabase;
+use enigma_auth_service::default::DefaultAuthService;
 use enigma_auth_service::grpc::GrpcAuthService;
-use enigma_auth_service::{DefaultAuthService, EnigmaAuthService};
+use enigma_auth_service::EnigmaAuthService;
 use enigma_profiles_grpc::profiles_server::ProfilesServer;
 use enigma_profiles_service::db::postgres::PostgresProfilesDatabase;
+use enigma_profiles_service::default::DefaultProfilesService;
 use enigma_profiles_service::grpc::GrpcProfilesService;
-use enigma_profiles_service::{DefaultProfilesService, EnigmaProfilesService};
+use enigma_profiles_service::EnigmaProfilesService;
 use enigma_service::middleware::AuthMiddleware;
 use std::error::Error;
 use std::sync::Arc;
