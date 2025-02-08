@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 enigma-auth = { path = "../enigma-auth" }
+itertools = "0.14.0"
 log = "0.4.25"
 prost = "0.13.4"
 tonic = "0.12.3"
