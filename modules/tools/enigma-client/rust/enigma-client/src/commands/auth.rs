@@ -86,7 +86,11 @@ pub async fn run_command(
         }
         AuthCommands::List => {
             let response = client.list_accounts().await?;
-            println!("RESPONSE={:?}", response);
+            println!("| {:8} | {:32} |", "User ID", "Username");
+            println!("|----------|----------------------------------|");
+            for (user_id, username) in response {
+                println!("| {:8} | {:32} |", user_id.value(), username);
+            }
         }
         AuthCommands::Login { username, password } => {
             let response = client.login(&username, &password).await?;
