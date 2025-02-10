@@ -4,12 +4,14 @@ use enigma_auth::UserId;
 use enigma_auth_client::authenticator::Authenticator;
 use enigma_auth_client::session::Session;
 use enigma_auth_grpc::auth_client::AuthClient;
-use enigma_profiles::EnigmaUserProfile;
+use enigma_profiles::{EnigmaPost, EnigmaUserProfile, PostId};
 use enigma_profiles_grpc::profiles_client::ProfilesClient;
 use enigma_profiles_grpc::{
-    AcceptConnectionRequest, AddConnectionRequest, CreateProfileRequest, DeleteProfileRequest,
-    GetConnectionsRequest, GetProfileRequest, RejectConnectionRequest, RemoveConnectionRequest,
-    RequestConnectionRequest, UpdateConnectionRequest, UpdateProfileRequest, UserProfile,
+    AcceptConnectionRequest, AddConnectionRequest, CreatePostRequest, CreateProfileRequest,
+    DeletePostRequest, DeleteProfileRequest, GetConnectionsRequest, GetProfileRequest,
+    ListFeedPostsRequest, ListProfilePostsRequest, RejectConnectionRequest,
+    RemoveConnectionRequest, RequestConnectionRequest, UpdateConnectionRequest,
+    UpdateProfileRequest, UserProfile,
 };
 use http_body::Body;
 use itertools::Itertools;
@@ -322,5 +324,87 @@ where
             .await?;
 
         Ok(())
+    }
+
+    async fn create_post(&self, user_id: &UserId, content: &str) -> Result<PostId, Box<dyn Error>> {
+        let response = self
+            .authenticator
+            .authenticated_call(
+                || CreatePostRequest {
+                    user_id: user_id.value(),
+                    content: content.to_string(),
+                },
+                |request| {
+                    let client = self.client.clone();
+                    async move { client.lock().await.create_post(request).await }
+                },
+            )
+            .await?
+            .into_inner();
+
+        Ok(PostId::from(response.post_id))
+    }
+
+    async fn delete_post(&self, post_id: &PostId) -> Result<(), Box<dyn Error>> {
+        self.authenticator
+            .authenticated_call(
+                || DeletePostRequest {
+                    post_id: post_id.to_string(),
+                },
+                |request| {
+                    let client = self.client.clone();
+                    async move { client.lock().await.delete_post(request).await }
+                },
+            )
+            .await?;
+
+        Ok(())
+    }
+
+    async fn list_feed_posts(&self, user_id: &UserId) -> Result<Vec<EnigmaPost>, Box<dyn Error>> {
+        let reply = self
+            .authenticator
+            .authenticated_call(
+                || ListFeedPostsRequest {
+                    user_id: user_id.value(),
+                },
+                |request| {
+                    let client = self.client.clone();
+                    async move { client.lock().await.list_feed_posts(request).await }
+                },
+            )
+            .await?;
+
+        Ok(reply
+            .into_inner()
+            .posts
+            .iter()
+            .map(EnigmaPost::try_from)
+            .try_collect()?)
+    }
+
+    async fn list_profile_posts(
+        &self,
+        user_id: &UserId,
+    ) -> Result<Vec<EnigmaPost>, Box<dyn Error>> {
+        let reply = self
+            .authenticator
+            .authenticated_call(
+                || ListProfilePostsRequest {
+                    user_id: user_id.value(),
+                },
+                |request| {
+                    let client = self.client.clone();
+                    async move { client.lock().await.list_profile_posts(request).await }
+                },
+            )
+            .await?;
+
+        Ok(reply
+            .into_inner()
+            .posts
+            .iter()
+            .map(EnigmaPost::try_from)
+            .try_collect()?)
     }
 }

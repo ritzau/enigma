@@ -18,4 +18,6 @@ sqlx = { version = "0.8.3", features = ["chrono", "postgres", "runtime-tokio-nat
 tokio = "1.43.0"
 tonic = "0.12.3"
 tracing = "0.1.41"
-uuid = { version = "1.12.0", features = ["v4"] }
+uuid = { version = "1.12.0", features = ["v4","v7"] }
+rand = "0.9.0"
+itertools = "0.14.0"

@@ -16,6 +16,11 @@ service Profiles {
     rpc AddConnection (AddConnectionRequest) returns (AddConnectionReply);
     rpc RemoveConnection (RemoveConnectionRequest) returns (RemoveConnectionReply);
     rpc UpdateConnection (UpdateConnectionRequest) returns (UpdateConnectionReply);
+
+    rpc CreatePost (CreatePostRequest) returns (CreatePostReply);
+    rpc DeletePost (DeletePostRequest) returns (DeletePostReply);
+    rpc ListProfilePosts (ListProfilePostsRequest) returns (ListProfilePostsReply);
+    rpc ListFeedPosts (ListFeedPostsRequest) returns (ListFeedPostsReply);
 }
 
 message CreateProfileRequest {
@@ -130,4 +135,50 @@ enum ConnectionStatus {
     CONNECTION_STATUS_FOLLOWER = 5;
     CONNECTION_STATUS_FOLLOWED = 6;
     CONNECTION_STATUS_GHOST = 7;
+}
+
+message CreatePostRequest {
+    reserved 2; // Audience
+    int64 user_id = 1;
+    // Audience: List of categories?
+    string content = 3;
+}
+
+message CreatePostReply {
+    string post_id = 1;
+}
+
+message DeletePostRequest {
+    string post_id = 1;
+}
+
+message DeletePostReply {
+}
+
+message ListProfilePostsRequest {
+    int64 user_id = 1;
+}
+
+message ListProfilePostsReply {
+    repeated Post posts = 1;
+}
+
+message ListFeedPostsRequest {
+    reserved 2; // Filter? Only get posts from some connections? Timeframe?
+    int64 user_id = 1;
+}
+
+message ListFeedPostsReply {
+    repeated Post posts = 1;
+}
+
+message Post {
+    reserved 6; // Audience
+
+    string post_id = 1;
+    int64 user_id = 2;
+    UserProfile user_profile = 3;
+    int64 created_at = 4;
+    int64 updated_at = 5;
+    string content = 7;
 }

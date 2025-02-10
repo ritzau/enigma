@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use enigma_auth::UserId;
-use enigma_profiles::EnigmaUserProfile;
+use enigma_profiles::{EnigmaPost, EnigmaUserProfile, PostId};
 use mockall::automock;
 use std::error::Error;
 
@@ -62,4 +62,13 @@ pub trait EnigmaProfilesClient {
         connection_id: &UserId,
         kind: &str,
     ) -> Result<(), Box<dyn Error>>;
+
+    async fn create_post(&self, user_id: &UserId, content: &str) -> Result<PostId, Box<dyn Error>>;
+
+    async fn delete_post(&self, post_id: &PostId) -> Result<(), Box<dyn Error>>;
+
+    async fn list_feed_posts(&self, user_id: &UserId) -> Result<Vec<EnigmaPost>, Box<dyn Error>>;
+
+    async fn list_profile_posts(&self, user_id: &UserId)
+        -> Result<Vec<EnigmaPost>, Box<dyn Error>>;
 }

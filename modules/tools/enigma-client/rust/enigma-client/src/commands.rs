@@ -1,5 +1,6 @@
 use crate::commands::auth::AuthCommands;
 use crate::commands::connections::ConnectionCommands;
+use crate::commands::posts::PostCommands;
 use crate::commands::profiles::ProfilesCommands;
 use crate::Cli;
 use clap::Subcommand;
@@ -10,6 +11,7 @@ use tracing::instrument;
 
 pub(crate) mod auth;
 pub(crate) mod connections;
+pub(crate) mod posts;
 pub(crate) mod profiles;
 
 #[derive(Debug, Subcommand)]
@@ -22,6 +24,8 @@ pub enum Commands {
     },
     #[command(subcommand)]
     Connections(ConnectionCommands),
+    #[command(subcommand)]
+    Post(PostCommands),
     #[command(subcommand)]
     Profiles(ProfilesCommands),
 }
@@ -41,6 +45,7 @@ pub async fn run_command(
             let response = auth_client.login(&username, &password).await?;
             println!("RESPONSE={:?}", response);
         }
+        Commands::Post(command) => posts::run_command(command, profiles_client).await?,
         Commands::Profiles(profiles_command) => {
             profiles::run_command(profiles_command, profiles_client).await?
         }

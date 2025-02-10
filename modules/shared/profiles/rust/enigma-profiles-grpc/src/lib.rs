@@ -83,3 +83,61 @@ impl TryFrom<&UserProfile> for EnigmaUserProfile {
         })
     }
 }
+
+impl TryFrom<enigma_profiles::EnigmaPost> for Post {
+    type Error = Status;
+
+    fn try_from(value: enigma_profiles::EnigmaPost) -> Result<Self, Self::Error> {
+        Ok(Self {
+            post_id: value.post_id.to_string(),
+            created_at: value.created_at.timestamp(),
+            updated_at: value.updated_at.timestamp(),
+            user_id: value.user_id.into(),
+            user_profile: Some(value.user_profile.try_into()?),
+            content: value.content,
+        })
+    }
+}
+
+impl TryFrom<Post> for enigma_profiles::EnigmaPost {
+    type Error = Status;
+
+    fn try_from(value: Post) -> Result<Self, Self::Error> {
+        Ok(Self {
+            post_id: value.post_id.into(),
+            created_at: DateTime::from_timestamp(value.created_at, 0)
+                .ok_or(Status::invalid_argument("Invalid creation date"))?,
+            updated_at: DateTime::from_timestamp(value.updated_at, 0)
+                .ok_or(Status::invalid_argument("Invalid update date"))?,
+            user_id: value.user_id.into(),
+            user_profile: EnigmaUserProfile::try_from(
+                value
+                    .user_profile
+                    .ok_or(Status::invalid_argument("Missing profile"))?,
+            )?,
+            content: value.content,
+        })
+    }
+}
+
+impl TryFrom<&Post> for enigma_profiles::EnigmaPost {
+    type Error = Status;
+
+    fn try_from(value: &Post) -> Result<Self, Self::Error> {
+        Ok(Self {
+            post_id: value.post_id.to_string().into(),
+            created_at: DateTime::from_timestamp(value.created_at, 0)
+                .ok_or(Status::invalid_argument("Invalid creation date"))?,
+            updated_at: DateTime::from_timestamp(value.updated_at, 0)
+                .ok_or(Status::invalid_argument("Invalid update date"))?,
+            user_id: value.user_id.into(),
+            user_profile: EnigmaUserProfile::try_from(
+                value
+                    .user_profile
+                    .as_ref()
+                    .ok_or(Status::invalid_argument("Missing profile"))?,
+            )?,
+            content: value.content.clone(),
+        })
+    }
+}
