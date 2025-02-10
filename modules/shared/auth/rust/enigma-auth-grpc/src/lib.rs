@@ -1,5 +1,4 @@
 use enigma_auth::{AuthExtension, Role, UserId, UserName};
-use itertools::Itertools;
 use log::info;
 use tonic::{Request, Status};
 
@@ -27,11 +26,7 @@ pub async fn verify_auth<R>(request: &Request<R>) -> Result<(UserId, UserName, V
                     username,
                     roles.join(", ")
                 );
-                let roles = roles
-                    .iter()
-                    .map(|r| Role::try_from(r.as_str()))
-                    .try_collect()
-                    .map_err(|_| Status::internal("Failed to process roles"))?;
+                let roles = roles.iter().map(|r| Role::from(r.as_str())).collect();
                 Ok((user_id.clone(), username.clone(), roles))
             }
             AuthExtension::Failed => Err(Status::unauthenticated("Invalid access token")),

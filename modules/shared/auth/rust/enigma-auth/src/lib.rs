@@ -176,18 +176,17 @@ pub enum AuthExtension {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Role {
+    Unknown,
     Admin,
     User,
 }
 
-impl TryFrom<&str> for Role {
-    type Error = Box<dyn std::error::Error>;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
+impl From<&str> for Role {
+    fn from(value: &str) -> Self {
         match value {
-            "admin" => Ok(Role::Admin),
-            "user" => Ok(Role::User),
-            _ => Err("Invalid role".into()),
+            "admin" => Role::Admin,
+            "user" => Role::User,
+            _ => Role::Unknown,
         }
     }
 }
@@ -195,6 +194,7 @@ impl TryFrom<&str> for Role {
 impl Display for Role {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
+            Role::Unknown => write!(f, "unknown"),
             Role::Admin => write!(f, "admin"),
             Role::User => write!(f, "user"),
         }

@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use enigma_auth::UserId;
-use enigma_profiles::EnigmaUserProfile;
+use enigma_profiles::{EnigmaPost, EnigmaUserProfile, PostId};
 use std::error::Error;
 use std::fmt::Display;
 
@@ -83,4 +83,16 @@ pub trait EnigmaProfilesDatabase {
         connection_id: &UserId,
         kind: &str,
     ) -> Result<(), DatabaseError>;
+
+    async fn create_post(&self, user_id: &UserId, content: &str) -> Result<PostId, DatabaseError>;
+
+    async fn delete_post(
+        &self,
+        post_id: &PostId,
+        user_id: Option<&UserId>,
+    ) -> Result<(), DatabaseError>;
+
+    async fn list_profile_posts(&self, user_id: &UserId) -> Result<Vec<EnigmaPost>, DatabaseError>;
+
+    async fn list_feed_posts(&self, user_id: &UserId) -> Result<Vec<EnigmaPost>, DatabaseError>;
 }

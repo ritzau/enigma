@@ -2,7 +2,7 @@ use crate::db::{DatabaseError, EnigmaProfilesDatabase};
 use crate::EnigmaProfilesService;
 use async_trait::async_trait;
 use enigma_auth::UserId;
-use enigma_profiles::EnigmaUserProfile;
+use enigma_profiles::{EnigmaPost, EnigmaUserProfile, PostId};
 
 pub struct DefaultProfilesService<DB>
 where
@@ -107,5 +107,25 @@ where
         self.db
             .update_connection(user_id, connection_id, kind)
             .await
+    }
+
+    async fn create_post(&self, user_id: &UserId, content: &str) -> Result<PostId, DatabaseError> {
+        self.db.create_post(user_id, content).await
+    }
+
+    async fn delete_post(
+        &self,
+        post_id: &PostId,
+        user_id: Option<&UserId>,
+    ) -> Result<(), DatabaseError> {
+        self.db.delete_post(post_id, user_id).await
+    }
+
+    async fn list_profile_posts(&self, user_id: &UserId) -> Result<Vec<EnigmaPost>, DatabaseError> {
+        self.db.list_profile_posts(user_id).await
+    }
+
+    async fn list_feed_posts(&self, user_id: &UserId) -> Result<Vec<EnigmaPost>, DatabaseError> {
+        self.db.list_feed_posts(user_id).await
     }
 }

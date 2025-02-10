@@ -1,9 +1,15 @@
 use crate::db::{DatabaseError, EnigmaProfilesDatabase};
 use async_trait::async_trait;
 use enigma_auth::UserId;
-use enigma_profiles::EnigmaUserProfile;
+use enigma_profiles::{EnigmaPost, EnigmaUserProfile, PostId};
+use rand::Rng;
+use sqlx::postgres::PgDatabaseError;
+use sqlx::types::chrono::{TimeZone, Utc};
 use sqlx::{Error, PgPool, Pool, Postgres, Transaction};
 use std::env;
+use std::future::Future;
+use std::time::Duration;
+use tokio::time::sleep;
 use tracing::instrument;
 use uuid::Uuid;
 
@@ -52,6 +58,14 @@ impl PostgresProfilesDatabase {
             "CREATE UNIQUE INDEX IF NOT EXISTS idx_connections_pair
             ON connections (user_id, peer_id)",
             "CREATE INDEX IF NOT EXISTS idx_user_id ON connections (user_id)",
+            "CREATE TABLE IF NOT EXISTS posts (
+                post_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                user_id BIGINT NOT NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                content TEXT NOT NULL,
+                FOREIGN KEY (user_id) REFERENCES accounts(user_id) ON DELETE CASCADE
+            )",
         ];
 
         for s in sql {
@@ -114,7 +128,6 @@ impl PostgresProfilesDatabase {
 }
 
 pub async fn ensure_enum_exists(pool: &PgPool) -> Result<(), Error> {
-    // Check if the enum already exists
     let exists: (bool,) = sqlx::query_as(
         "SELECT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'connection_status');",
     )
@@ -122,7 +135,6 @@ pub async fn ensure_enum_exists(pool: &PgPool) -> Result<(), Error> {
     .await?;
 
     if !exists.0 {
-        // Enum doesn't exist, so create it
         sqlx::query(
             "CREATE TYPE CONNECTION_STATUS AS ENUM (
                 'request_sent',
@@ -443,4 +455,158 @@ impl EnigmaProfilesDatabase for PostgresProfilesDatabase {
 
         Ok(())
     }
+
+    #[instrument(err, skip(self))]
+    async fn create_post(&self, user_id: &UserId, content: &str) -> Result<PostId, DatabaseError> {
+        retry_on_unique_violation(|| async {
+            let post_id = Uuid::now_v7();
+
+            sqlx::query!(
+                "INSERT INTO posts (post_id, user_id, content) VALUES ($1, $2, $3)",
+                post_id,
+                user_id.value(),
+                content
+            )
+            .execute(&self.pool)
+            .await?;
+
+            Ok(post_id.into())
+        })
+        .await
+        .map_err(|e| DatabaseError::IllegalState("Cannot create post", Some(e.into())))
+    }
+
+    #[instrument(err, skip(self))]
+    async fn delete_post(
+        &self,
+        post_id: &PostId,
+        user_id: Option<&UserId>,
+    ) -> Result<(), DatabaseError> {
+        let post_id: Uuid = post_id.try_into().map_err(|e: uuid::Error| {
+            DatabaseError::IllegalState("Cannot convert post ID", Some(e.into()))
+        })?;
+
+        if let Some(user_id) = user_id {
+            sqlx::query!(
+                "DELETE FROM posts WHERE post_id = $1 AND user_id = $2",
+                post_id,
+                user_id.value()
+            )
+        } else {
+            sqlx::query!("DELETE FROM posts WHERE post_id = $1", post_id)
+        }
+        .execute(&self.pool)
+        .await
+        .map_err(|e| DatabaseError::NotFound("Cannot delete post", Some(e.into())))?;
+
+        Ok(())
+    }
+
+    #[instrument(err, skip_all)]
+    async fn list_profile_posts(&self, user_id: &UserId) -> Result<Vec<EnigmaPost>, DatabaseError> {
+        let profile = self.get_profile(user_id).await?;
+
+        let records = sqlx::query!(
+            "SELECT post_id, created_at, updated_at, content
+            FROM posts
+            WHERE user_id = $1",
+            user_id.value()
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| DatabaseError::IllegalState("Can't list posts", Some(e.into())))?
+        .into_iter()
+        .map(|r| EnigmaPost {
+            post_id: r.post_id.into(),
+            created_at: Utc.from_utc_datetime(&r.created_at),
+            updated_at: Utc.from_utc_datetime(&r.updated_at),
+            user_id: user_id.clone(),
+            user_profile: profile.clone(),
+            content: r.content,
+        })
+        .collect();
+
+        Ok(records)
+    }
+
+    #[instrument(err, skip_all)]
+    async fn list_feed_posts(&self, user_id: &UserId) -> Result<Vec<EnigmaPost>, DatabaseError> {
+        let records = sqlx::query!(
+            "SELECT posts.post_id, posts.created_at, posts.updated_at, posts.content, user_profiles.*
+            FROM posts
+            INNER JOIN connections ON posts.user_id = connections.peer_id
+            INNER JOIN user_profiles ON connections.peer_id = user_profiles.user_id
+            WHERE connections.user_id = $1 AND connections.status = 'connected'",
+            user_id.value()
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| DatabaseError::IllegalState("Can't list posts", Some(e.into())))?
+        .into_iter()
+        .map(|r| EnigmaPost {
+            post_id: r.post_id.into(),
+            created_at: Utc.from_utc_datetime(&r.created_at),
+            updated_at: Utc.from_utc_datetime(&r.updated_at),
+            user_id: user_id.clone(),
+            user_profile: EnigmaUserProfile {
+                user_id: r.user_id.into(),
+                legal_name: r.legal_name,
+                display_name: r.display_name,
+                profile_picture_url: r.profile_picture_url,
+                primary_email: r.primary_email,
+                date_of_birth: r.date_of_birth,
+            },
+            content: r.content,
+        })
+        .collect();
+
+        Ok(records)
+    }
+}
+
+/// Maximum retry attempts for handling unique constraint violations.
+const MAX_RETRIES: u8 = 3;
+/// Minimum delay before retrying (in milliseconds).
+const MIN_RETRY_DELAY_MS: u64 = 25;
+/// Maximum delay before retrying (in milliseconds).
+const MAX_RETRY_DELAY_MS: u64 = 100;
+
+async fn retry_on_unique_violation<F, Fut, T>(operation: F) -> Result<T, Error>
+where
+    F: Fn() -> Fut,
+    Fut: Future<Output = Result<T, Error>>,
+{
+    let mut retries = 0;
+
+    while retries < MAX_RETRIES {
+        match operation().await {
+            Ok(result) => return Ok(result),
+            Err(Error::Database(err)) if is_unique_violation(&*err) => {
+                retries += 1;
+                let delay = random_delay();
+                eprintln!(
+                    "Unique constraint violation detected, retrying in {} ms... ({})",
+                    delay, retries
+                );
+                sleep(Duration::from_millis(delay)).await;
+            }
+            Err(e) => return Err(e),
+        }
+    }
+
+    Err(Error::Protocol(
+        "Max retries reached for unique constraint violation".into(),
+    ))
+}
+
+fn is_unique_violation(err: &dyn sqlx::error::DatabaseError) -> bool {
+    if let Some(pg_err) = err.try_downcast_ref::<PgDatabaseError>() {
+        return pg_err.constraint().is_some();
+    }
+    false
+}
+
+fn random_delay() -> u64 {
+    let mut rng = rand::rng();
+    rng.random_range(MIN_RETRY_DELAY_MS..=MAX_RETRY_DELAY_MS)
 }
