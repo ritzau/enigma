@@ -11,22 +11,30 @@ use enigma_auth_grpc::{
 };
 use sqlx::types::Uuid;
 use std::sync::Arc;
-use tokio::sync::Mutex;
 use tonic::{Request, Response, Status};
 use tracing::instrument;
 
-pub struct GrpcAuthService<T: EnigmaAuthService> {
-    auth_service: Arc<Mutex<T>>,
+pub struct GrpcAuthService<Svc>
+where
+    Svc: EnigmaAuthService,
+{
+    auth_service: Arc<Svc>,
 }
 
-impl<T: EnigmaAuthService> GrpcAuthService<T> {
-    pub fn new(auth_service: Arc<Mutex<T>>) -> Self {
+impl<Svc> GrpcAuthService<Svc>
+where
+    Svc: EnigmaAuthService,
+{
+    pub fn new(auth_service: Arc<Svc>) -> Self {
         GrpcAuthService { auth_service }
     }
 }
 
 #[async_trait]
-impl<T: EnigmaAuthService + 'static> auth_server::Auth for GrpcAuthService<T> {
+impl<Svc> auth_server::Auth for GrpcAuthService<Svc>
+where
+    Svc: EnigmaAuthService + Send + Sync + 'static,
+{
     #[instrument(
         err,
         skip(self, request),
@@ -37,20 +45,14 @@ impl<T: EnigmaAuthService + 'static> auth_server::Auth for GrpcAuthService<T> {
         &self,
         request: Request<CreateAccountRequest>,
     ) -> Result<Response<CreateAccountReply>, Status> {
-        let request = request.get_ref();
-        match self
-            .auth_service
-            .lock()
-            .await
-            .create_account(&request.username, &request.password)
-            .await
-        {
-            Ok(user_id) => {
-                let reply = CreateAccountReply { user_id };
-                Ok(Response::new(reply))
-            }
-            Err(e) => Err(Status::internal(e.to_string())),
-        }
+        let parameters = request.get_ref();
+        let username = &parameters.username;
+        let password = &parameters.password;
+
+        let result = self.auth_service.create_account(username, password).await;
+        let user_id = result.map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(CreateAccountReply { user_id }))
     }
 
     #[instrument(
@@ -68,12 +70,8 @@ impl<T: EnigmaAuthService + 'static> auth_server::Auth for GrpcAuthService<T> {
 
         verify_id_or_admin(&request, &user_id).await?;
 
-        self.auth_service
-            .lock()
-            .await
-            .delete_account(&user_id)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        let result = self.auth_service.delete_account(&user_id).await;
+        result.map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(DeleteAccountReply {}))
     }
@@ -95,12 +93,8 @@ impl<T: EnigmaAuthService + 'static> auth_server::Auth for GrpcAuthService<T> {
         let user_id = UserId::from(parameters.user_id);
         let role = &parameters.role;
 
-        self.auth_service
-            .lock()
-            .await
-            .add_role(&user_id, role)
-            .await
-            .map_err(|_| Status::invalid_argument("No such user"))?;
+        let result = self.auth_service.add_role(&user_id, role).await;
+        result.map_err(|_| Status::invalid_argument("No such user"))?;
 
         Ok(Response::new(AddRoleReply {}))
     }
@@ -122,12 +116,8 @@ impl<T: EnigmaAuthService + 'static> auth_server::Auth for GrpcAuthService<T> {
         let user_id = UserId::from(parameters.user_id);
         let role = &parameters.role;
 
-        self.auth_service
-            .lock()
-            .await
-            .remove_role(&user_id, role)
-            .await
-            .map_err(|_| Status::invalid_argument("No such user"))?;
+        let result = self.auth_service.remove_role(&user_id, role).await;
+        result.map_err(|_| Status::invalid_argument("No such user"))?;
 
         Ok(Response::new(RemoveRoleReply {}))
     }
@@ -144,14 +134,12 @@ impl<T: EnigmaAuthService + 'static> auth_server::Auth for GrpcAuthService<T> {
     ) -> Result<Response<GetUserInfoReply>, Status> {
         verify_role(&request, &Role::User).await?;
 
-        let request = request.get_ref();
-        let (user_id, username, roles) = self
-            .auth_service
-            .lock()
-            .await
-            .get_user_info(&request.user_id.into())
-            .await
-            .map_err(|_| Status::invalid_argument("Invalid account"))?;
+        let parameters = request.get_ref();
+        let user_id = UserId::from(parameters.user_id);
+
+        let result = self.auth_service.get_user_info(&user_id).await;
+        let (user_id, username, roles) =
+            result.map_err(|_| Status::invalid_argument("Invalid account"))?;
 
         Ok(Response::new(GetUserInfoReply {
             user_id: user_id.into(),
@@ -177,15 +165,13 @@ impl<T: EnigmaAuthService + 'static> auth_server::Auth for GrpcAuthService<T> {
 
         verify_id_or_admin(&request, &user_id).await?;
 
-        self.auth_service
-            .lock()
-            .await
+        let result = self
+            .auth_service
             .change_password(&user_id, old_password, new_password)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+            .await;
+        result.map_err(|e| Status::internal(e.to_string()))?;
 
-        let reply = ChangePasswordReply {};
-        Ok(Response::new(reply))
+        Ok(Response::new(ChangePasswordReply {}))
     }
 
     #[instrument(err, skip(self, request), fields(caller = to_caller_string(&request)))]
@@ -199,13 +185,11 @@ impl<T: EnigmaAuthService + 'static> auth_server::Auth for GrpcAuthService<T> {
         let refresh_token = RefreshToken::from(refresh_token);
         let remote_ip = request.remote_addr().map(|addr| addr.ip());
 
-        let (access_token, refresh_token) = self
+        let result = self
             .auth_service
-            .lock()
-            .await
             .refresh_session(&refresh_token, &remote_ip)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+            .await;
+        let (access_token, refresh_token) = result.map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(RefreshSessionReply {
             access_token: access_token.to_string(),
@@ -225,13 +209,9 @@ impl<T: EnigmaAuthService + 'static> auth_server::Auth for GrpcAuthService<T> {
         let password = &parameters.password;
         let remote_ip = request.remote_addr().map(|addr| addr.ip());
 
-        let (user_id, access_token, refresh_token) = self
-            .auth_service
-            .lock()
-            .await
-            .login(name, password, remote_ip)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        let result = self.auth_service.login(name, password, remote_ip).await;
+        let (user_id, access_token, refresh_token) =
+            result.map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(LoginReply {
             user_id: user_id.value(),
@@ -247,13 +227,9 @@ impl<T: EnigmaAuthService + 'static> auth_server::Auth for GrpcAuthService<T> {
     ) -> Result<Response<ListAccountsReply>, Status> {
         verify_role(&request, &Role::User).await?;
 
-        let users = self
-            .auth_service
-            .lock()
-            .await
-            .list_accounts()
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?
+        let result = self.auth_service.list_accounts().await;
+        let proto_users = result.map_err(|e| Status::internal(e.to_string()))?;
+        let users = proto_users
             .into_iter()
             .map(|(id, name)| User { id, name })
             .collect();
@@ -274,17 +250,12 @@ impl<T: EnigmaAuthService + 'static> auth_server::Auth for GrpcAuthService<T> {
         verify_admin(&request).await?;
 
         let parameters = request.get_ref();
-        let access_token = Uuid::parse_str(&parameters.access_token)
+        let uuid_access_token = Uuid::parse_str(&parameters.access_token)
             .map_err(|e| Status::internal(e.to_string()))?;
-        let access_token = AccessToken::from(access_token);
+        let access_token = AccessToken::from(uuid_access_token);
 
-        let (is_valid, user_id) = self
-            .auth_service
-            .lock()
-            .await
-            .get_session(&access_token)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        let result = self.auth_service.get_session(&access_token).await;
+        let (is_valid, user_id) = result.map_err(|e| Status::internal(e.to_string()))?;
 
         if is_valid {
             Ok(Response::new(GetSessionReply {
@@ -302,13 +273,8 @@ impl<T: EnigmaAuthService + 'static> auth_server::Auth for GrpcAuthService<T> {
     ) -> Result<Response<PurgeExpiredSessionsReply>, Status> {
         verify_admin(&request).await?;
 
-        let purged_session_count = self
-            .auth_service
-            .lock()
-            .await
-            .purge_expired_sessions()
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        let result = self.auth_service.purge_expired_sessions().await;
+        let purged_session_count = result.map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(PurgeExpiredSessionsReply {
             purged_session_count,

@@ -11,7 +11,6 @@ use enigma_profiles_service::EnigmaProfilesService;
 use enigma_service::middleware::AuthMiddleware;
 use std::error::Error;
 use std::sync::Arc;
-use tokio::sync::Mutex;
 use tonic::transport::Server;
 use tower::layer::layer_fn;
 use tower::ServiceBuilder;
@@ -46,13 +45,13 @@ type DefaultGrpcAuthServer = AuthServer<GrpcAuthService<DefaultPostgresAuthServi
 
 async fn create_authenticating_auth_server() -> Result<
     (
-        Arc<Mutex<DefaultPostgresAuthService>>,
+        Arc<DefaultPostgresAuthService>,
         AuthMiddleware<DefaultGrpcAuthServer, impl EnigmaAuthService + Sized>,
     ),
     Box<dyn Error>,
 > {
     let db = PostgresAuthDatabase::new().await?;
-    let auth = Arc::new(Mutex::new(DefaultAuthService::new(db)));
+    let auth = Arc::new(DefaultAuthService::new(db));
     let grpc_auth = GrpcAuthService::new(auth.clone());
     let auth_server = AuthServer::new(grpc_auth);
     let authenticated_auth_service = with_authentication(auth.clone(), auth_server);
@@ -60,7 +59,7 @@ async fn create_authenticating_auth_server() -> Result<
 }
 
 async fn create_authenticating_profiles_server(
-    auth: Arc<Mutex<DefaultPostgresAuthService>>,
+    auth: Arc<DefaultPostgresAuthService>,
 ) -> Result<
     AuthMiddleware<
         ProfilesServer<GrpcProfilesService<impl EnigmaProfilesService + Sized>>,
@@ -69,7 +68,7 @@ async fn create_authenticating_profiles_server(
     Box<dyn Error>,
 > {
     let db = PostgresProfilesDatabase::new().await?;
-    let profiles = Arc::new(Mutex::new(DefaultProfilesService::new(db)));
+    let profiles = Arc::new(DefaultProfilesService::new(db));
     let grpc_profiles = GrpcProfilesService::new(profiles.clone());
     let profiles_server = ProfilesServer::new(grpc_profiles);
     let authenticated_profiles_service = with_authentication(auth, profiles_server);
@@ -77,7 +76,7 @@ async fn create_authenticating_profiles_server(
 }
 
 fn with_authentication<S>(
-    auth: Arc<Mutex<impl EnigmaAuthService>>,
+    auth: Arc<impl EnigmaAuthService>,
     auth_server: S,
 ) -> AuthMiddleware<S, impl EnigmaAuthService> {
     ServiceBuilder::new()

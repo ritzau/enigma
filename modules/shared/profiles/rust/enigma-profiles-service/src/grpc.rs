@@ -19,7 +19,6 @@ use enigma_profiles_grpc::{
 };
 use itertools::Itertools;
 use std::sync::Arc;
-use tokio::sync::Mutex;
 use tonic::{Request, Response, Status};
 use tracing::{event, instrument, Level};
 
@@ -27,14 +26,14 @@ pub struct GrpcProfilesService<Svc>
 where
     Svc: EnigmaProfilesService,
 {
-    profiles_service: Arc<Mutex<Svc>>,
+    profiles_service: Arc<Svc>,
 }
 
 impl<Svc> GrpcProfilesService<Svc>
 where
     Svc: EnigmaProfilesService,
 {
-    pub fn new(profiles_service: Arc<Mutex<Svc>>) -> Self {
+    pub fn new(profiles_service: Arc<Svc>) -> Self {
         Self { profiles_service }
     }
 }
@@ -42,7 +41,7 @@ where
 #[async_trait]
 impl<Svc> Profiles for GrpcProfilesService<Svc>
 where
-    Svc: EnigmaProfilesService + Send + 'static,
+    Svc: EnigmaProfilesService + Send + Sync + 'static,
 {
     #[instrument(err, skip_all)]
     async fn create_profile(
@@ -59,12 +58,8 @@ where
 
         let profile = EnigmaUserProfile::try_from(profile_message)?;
 
-        self.profiles_service
-            .lock()
-            .await
-            .create_profile(&profile)
-            .await
-            .map_err(|_| Status::invalid_argument("Invalid user"))?;
+        let result = self.profiles_service.create_profile(&profile).await;
+        result.map_err(|_| Status::invalid_argument("Invalid user"))?;
 
         Ok(Response::new(CreateProfileReply {}))
     }
@@ -78,12 +73,8 @@ where
 
         verify_id_or_admin(&request, &user_id).await?;
 
-        self.profiles_service
-            .lock()
-            .await
-            .delete_profile(&user_id)
-            .await
-            .map_err(|_| Status::invalid_argument("Invalid user"))?;
+        let result = self.profiles_service.delete_profile(&user_id).await;
+        result.map_err(|_| Status::invalid_argument("Invalid user"))?;
 
         Ok(Response::new(DeleteProfileReply {}))
     }
@@ -98,13 +89,8 @@ where
         let parameters = request.get_ref();
         let user_id = UserId::from(parameters.user_id);
 
-        let profile = self
-            .profiles_service
-            .lock()
-            .await
-            .get_profile(&user_id)
-            .await
-            .map_err(|_| Status::invalid_argument("Invalid user"))?;
+        let result = self.profiles_service.get_profile(&user_id).await;
+        let profile = result.map_err(|_| Status::invalid_argument("Invalid user"))?;
 
         let reply = GetProfileReply {
             profile: Some(profile.try_into()?),
@@ -127,12 +113,8 @@ where
 
         verify_id_or_admin(&request, &profile.user_id).await?;
 
-        self.profiles_service
-            .lock()
-            .await
-            .update_profile(&profile)
-            .await
-            .map_err(|_| Status::invalid_argument("Invalid user"))?;
+        let result = self.profiles_service.update_profile(&profile).await;
+        result.map_err(|_| Status::invalid_argument("Invalid user"))?;
 
         Ok(Response::new(UpdateProfileReply {}))
     }
@@ -148,12 +130,11 @@ where
 
         verify_id_or_admin(&request, &user_id).await?;
 
-        self.profiles_service
-            .lock()
-            .await
+        let result = self
+            .profiles_service
             .request_connection(&user_id, &connection_id, kind)
-            .await
-            .map_err(|_| Status::invalid_argument("Cannot request connection"))?;
+            .await;
+        result.map_err(|_| Status::invalid_argument("Cannot request connection"))?;
 
         Ok(Response::new(RequestConnectionReply {}))
     }
@@ -169,12 +150,11 @@ where
 
         verify_id_or_admin(&request, &user_id).await?;
 
-        self.profiles_service
-            .lock()
-            .await
+        let result = self
+            .profiles_service
             .accept_connection(&user_id, &connection_id, kind)
-            .await
-            .map_err(|_| Status::invalid_argument("Cannot request connection"))?;
+            .await;
+        result.map_err(|_| Status::invalid_argument("Cannot request connection"))?;
 
         Ok(Response::new(AcceptConnectionReply {}))
     }
@@ -189,12 +169,11 @@ where
 
         verify_id_or_admin(&request, &user_id).await?;
 
-        self.profiles_service
-            .lock()
-            .await
+        let result = self
+            .profiles_service
             .reject_connection(&user_id, &connection_id)
-            .await
-            .map_err(|_| Status::invalid_argument("Cannot reject connection"))?;
+            .await;
+        result.map_err(|_| Status::invalid_argument("Cannot reject connection"))?;
 
         Ok(Response::new(RejectConnectionReply {}))
     }
@@ -209,13 +188,9 @@ where
 
         verify_id_or_admin(&request, &user_id).await?;
 
-        let connections = self
-            .profiles_service
-            .lock()
-            .await
-            .get_connections(&user_id)
-            .await
-            .map_err(|_| Status::internal("Cannot get connections"))?
+        let result = self.profiles_service.get_connections(&user_id).await;
+        let proto_connections = result.map_err(|_| Status::internal("Cannot get connections"))?;
+        let connections = proto_connections
             .into_iter()
             .map(|(kind, profile)| {
                 let profile = profile.try_into()?;
@@ -241,12 +216,11 @@ where
 
         verify_id_or_admin(&request, &user_id).await?;
 
-        self.profiles_service
-            .lock()
-            .await
+        let result = self
+            .profiles_service
             .add_connection(&user_id, &connection_id, kind)
-            .await
-            .map_err(|_| Status::invalid_argument("Cannot add connection"))?;
+            .await;
+        result.map_err(|_| Status::invalid_argument("Cannot add connection"))?;
 
         Ok(Response::new(AddConnectionReply {}))
     }
@@ -262,12 +236,11 @@ where
 
         verify_id_or_admin(&request, &user_id).await?;
 
-        self.profiles_service
-            .lock()
-            .await
+        let result = self
+            .profiles_service
             .remove_connection(&user_id, &connection_id)
-            .await
-            .map_err(|_| Status::invalid_argument("Cannot remove connection"))?;
+            .await;
+        result.map_err(|_| Status::invalid_argument("Cannot remove connection"))?;
 
         Ok(Response::new(RemoveConnectionReply {}))
     }
@@ -284,12 +257,11 @@ where
 
         verify_id_or_admin(&request, &user_id).await?;
 
-        self.profiles_service
-            .lock()
-            .await
+        let result = self
+            .profiles_service
             .update_connection(&user_id, &connection_id, kind)
-            .await
-            .map_err(|_| Status::invalid_argument("Cannot update connection"))?;
+            .await;
+        result.map_err(|_| Status::invalid_argument("Cannot update connection"))?;
 
         Ok(Response::new(UpdateConnectionReply {}))
     }
@@ -305,11 +277,8 @@ where
 
         verify_id_or_admin(&request, &user_id).await?;
 
-        let post_id = {
-            let service = self.profiles_service.lock().await;
-            service.create_post(&user_id, content).await
-        }
-        .map_err(|e| {
+        let result = self.profiles_service.create_post(&user_id, content).await;
+        let post_id = result.map_err(|e| {
             event!(Level::WARN, "Cannot create post: {:?}", e);
             Status::invalid_argument("Cannot create post")
         })?;
@@ -334,11 +303,8 @@ where
             Some(&user_id)
         };
 
-        {
-            let service = self.profiles_service.lock().await;
-            service.delete_post(&post_id, user_id).await
-        }
-        .map_err(|e| {
+        let result = self.profiles_service.delete_post(&post_id, user_id).await;
+        result.map_err(|e| {
             event!(Level::WARN, "Cannot delete post: {:?}", e);
             Status::not_found("Cannot delete post")
         })?;
@@ -356,14 +322,12 @@ where
 
         verify_id_or_admin(&request, &user_id).await?;
 
-        let posts = {
-            let service = self.profiles_service.lock().await;
-            let result = service.list_profile_posts(&user_id).await;
-            result.map_err(|_| Status::internal("Cannot list profile posts"))?
-        }
-        .into_iter()
-        .map(|post| post.try_into())
-        .try_collect()?;
+        let result = self.profiles_service.list_profile_posts(&user_id).await;
+        let proto_posts = result.map_err(|_| Status::internal("Cannot list profile posts"))?;
+        let posts = proto_posts
+            .into_iter()
+            .map(|post| post.try_into())
+            .try_collect()?;
 
         Ok(Response::new(ListProfilePostsReply { posts }))
     }
@@ -378,14 +342,12 @@ where
 
         verify_id_or_admin(&request, &user_id).await?;
 
-        let posts = {
-            let service = self.profiles_service.lock().await;
-            let result = service.list_feed_posts(&user_id).await;
-            result.map_err(|_| Status::internal("Cannot list profile posts"))?
-        }
-        .into_iter()
-        .map(|post| post.try_into())
-        .try_collect()?;
+        let result = self.profiles_service.list_feed_posts(&user_id).await;
+        let proto_posts = result.map_err(|_| Status::internal("Cannot list profile posts"))?;
+        let posts = proto_posts
+            .into_iter()
+            .map(|post| post.try_into())
+            .try_collect()?;
 
         Ok(Response::new(ListFeedPostsReply { posts }))
     }

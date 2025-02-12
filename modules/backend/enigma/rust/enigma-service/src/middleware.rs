@@ -7,7 +7,6 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll};
-use tokio::sync::Mutex;
 use tonic::body::BoxBody;
 use tonic::codegen::http::Request;
 use tonic::codegen::{http, Bytes, Service};
@@ -17,11 +16,11 @@ use uuid::Uuid;
 
 pub struct AuthMiddleware<S, T: EnigmaAuthService> {
     inner: S,
-    auth_service: Arc<Mutex<T>>,
+    auth_service: Arc<T>,
 }
 
 impl<S, T: EnigmaAuthService> AuthMiddleware<S, T> {
-    pub fn new(inner: S, auth_service: Arc<Mutex<T>>) -> Self {
+    pub fn new(inner: S, auth_service: Arc<T>) -> Self {
         Self {
             inner,
             auth_service,
@@ -78,7 +77,7 @@ where
 }
 
 async fn process_request(
-    auth_service: Arc<Mutex<impl EnigmaAuthService>>,
+    auth_service: Arc<impl EnigmaAuthService>,
     mut request: Request<BoxBody>,
 ) -> Request<BoxBody> {
     let Some(access_token) = get_access_token(&request) else {
@@ -99,11 +98,9 @@ async fn process_request(
 }
 
 async fn get_session(
-    auth_service: Arc<Mutex<impl EnigmaAuthService + Sized>>,
+    auth_service: Arc<impl EnigmaAuthService + Sized>,
     access_token: &AccessToken,
 ) -> Option<(UserId, UserName, Vec<String>)> {
-    let auth_service = auth_service.lock().await;
-
     let user_id = match auth_service.get_session(access_token).await {
         Ok((true, Some(user_id))) => user_id,
         _ => return None,
