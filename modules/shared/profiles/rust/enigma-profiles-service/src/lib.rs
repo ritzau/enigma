@@ -11,6 +11,8 @@ pub mod grpc;
 
 #[async_trait]
 pub trait EnigmaProfilesService {
+    // Profiles
+
     async fn create_profile(&self, profile: &EnigmaUserProfile) -> Result<(), DatabaseError>;
 
     async fn delete_profile(&self, user_id: &UserId) -> Result<(), DatabaseError>;
@@ -18,6 +20,10 @@ pub trait EnigmaProfilesService {
     async fn get_profile(&self, user_id: &UserId) -> Result<EnigmaUserProfile, DatabaseError>;
 
     async fn update_profile(&self, profile: &EnigmaUserProfile) -> Result<(), DatabaseError>;
+
+    async fn search_profiles(&self, query: &str) -> Result<Vec<EnigmaUserProfile>, DatabaseError>;
+
+    // Connections
 
     async fn request_connection(
         &self,
@@ -62,6 +68,8 @@ pub trait EnigmaProfilesService {
         connection_id: &UserId,
         kind: &str,
     ) -> Result<(), DatabaseError>;
+
+    // Posts
 
     async fn create_post(&self, user_id: &UserId, content: &str) -> Result<PostId, DatabaseError>;
 

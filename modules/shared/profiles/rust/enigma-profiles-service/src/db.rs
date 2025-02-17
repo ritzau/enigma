@@ -41,6 +41,7 @@ pub trait EnigmaProfilesDatabase {
     async fn delete_profile(&self, user_id: &UserId) -> Result<(), DatabaseError>;
     async fn get_profile(&self, user_id: &UserId) -> Result<EnigmaUserProfile, DatabaseError>;
     async fn update_profile(&self, profile: &EnigmaUserProfile) -> Result<(), DatabaseError>;
+    async fn search_profiles(&self, query: &str) -> Result<Vec<EnigmaUserProfile>, DatabaseError>;
 
     async fn request_connection(
         &self,

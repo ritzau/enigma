@@ -18,6 +18,8 @@ pub trait EnigmaProfilesClient {
 
     async fn update_profile(&self, profile: &EnigmaUserProfile) -> Result<(), Box<dyn Error>>;
 
+    async fn search_profiles(&self, query: &str) -> Result<Vec<EnigmaUserProfile>, Box<dyn Error>>;
+
     async fn request_connection(
         &self,
         user_id: &UserId,

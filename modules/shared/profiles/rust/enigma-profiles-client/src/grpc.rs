@@ -10,8 +10,8 @@ use enigma_profiles_grpc::{
     AcceptConnectionRequest, AddConnectionRequest, CreatePostRequest, CreateProfileRequest,
     DeletePostRequest, DeleteProfileRequest, GetConnectionsRequest, GetProfileRequest,
     ListFeedPostsRequest, ListProfilePostsRequest, RejectConnectionRequest,
-    RemoveConnectionRequest, RequestConnectionRequest, UpdateConnectionRequest,
-    UpdateProfileRequest, UserProfile,
+    RemoveConnectionRequest, RequestConnectionRequest, SearchProfilesRequest,
+    UpdateConnectionRequest, UpdateProfileRequest, UserProfile,
 };
 use http_body::Body;
 use itertools::Itertools;
@@ -155,6 +155,30 @@ where
             .await?;
 
         Ok(())
+    }
+
+    async fn search_profiles(&self, query: &str) -> Result<Vec<EnigmaUserProfile>, Box<dyn Error>> {
+        let reply = self
+            .authenticator
+            .authenticated_call(
+                || SearchProfilesRequest {
+                    query: query.to_string(),
+                },
+                |request| {
+                    let client = self.client.clone();
+                    async move { client.lock().await.search_profiles(request).await }
+                },
+            )
+            .await?;
+
+        let profiles = reply
+            .into_inner()
+            .profiles
+            .iter()
+            .map(EnigmaUserProfile::try_from)
+            .try_collect()?;
+
+        Ok(profiles)
     }
 
     async fn request_connection(

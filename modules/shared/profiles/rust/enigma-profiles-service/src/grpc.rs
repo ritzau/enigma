@@ -7,15 +7,12 @@ use enigma_profiles_grpc::profiles_server::Profiles;
 use enigma_profiles_grpc::{
     AcceptConnectionReply, AcceptConnectionRequest, AddConnectionReply, AddConnectionRequest,
     Connection, CreatePostReply, CreatePostRequest, CreateProfileReply, CreateProfileRequest,
-    DeletePostReply, DeletePostRequest, GetConnectionsReply, GetConnectionsRequest,
+    DeletePostReply, DeletePostRequest, DeleteProfileReply, DeleteProfileRequest,
+    GetConnectionsReply, GetConnectionsRequest, GetProfileReply, GetProfileRequest,
     ListFeedPostsReply, ListFeedPostsRequest, ListProfilePostsReply, ListProfilePostsRequest,
     RejectConnectionReply, RejectConnectionRequest, RemoveConnectionReply, RemoveConnectionRequest,
-    RequestConnectionReply, RequestConnectionRequest, UpdateConnectionReply,
-    UpdateConnectionRequest,
-};
-use enigma_profiles_grpc::{
-    DeleteProfileReply, DeleteProfileRequest, GetProfileReply, GetProfileRequest,
-    UpdateProfileReply, UpdateProfileRequest,
+    RequestConnectionReply, RequestConnectionRequest, SearchProfilesReply, SearchProfilesRequest,
+    UpdateConnectionReply, UpdateConnectionRequest, UpdateProfileReply, UpdateProfileRequest,
 };
 use itertools::Itertools;
 use std::sync::Arc;
@@ -43,6 +40,8 @@ impl<Svc> Profiles for GrpcProfilesService<Svc>
 where
     Svc: EnigmaProfilesService + Send + Sync + 'static,
 {
+    // Profiles
+
     #[instrument(err, skip_all)]
     async fn create_profile(
         &self,
@@ -118,6 +117,27 @@ where
 
         Ok(Response::new(UpdateProfileReply {}))
     }
+
+    async fn search_profiles(
+        &self,
+        request: Request<SearchProfilesRequest>,
+    ) -> Result<Response<SearchProfilesReply>, Status> {
+        let parameters = request.get_ref();
+        let query = &parameters.query;
+
+        verify_role(&request, &Role::User).await?;
+
+        let result = self.profiles_service.search_profiles(query).await;
+        let proto_profiles = result.map_err(|_| Status::internal("Cannot search profiles"))?;
+        let profiles = proto_profiles
+            .into_iter()
+            .map(|profile| profile.try_into())
+            .try_collect()?;
+
+        Ok(Response::new(SearchProfilesReply { profiles }))
+    }
+
+    // Connections
 
     async fn request_connection(
         &self,
@@ -265,6 +285,8 @@ where
 
         Ok(Response::new(UpdateConnectionReply {}))
     }
+
+    // Posts
 
     #[instrument(err, skip_all)]
     async fn create_post(
