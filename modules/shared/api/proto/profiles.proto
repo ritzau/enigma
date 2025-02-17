@@ -7,6 +7,7 @@ service Profiles {
     rpc DeleteProfile (DeleteProfileRequest) returns (DeleteProfileReply);
     rpc GetProfile (GetProfileRequest) returns (GetProfileReply);
     rpc UpdateProfile (UpdateProfileRequest) returns (UpdateProfileReply);
+    rpc SearchProfiles (SearchProfilesRequest) returns (SearchProfilesReply);
 
     rpc RequestConnection (RequestConnectionRequest) returns (RequestConnectionReply);
     rpc AcceptConnection (AcceptConnectionRequest) returns (AcceptConnectionReply);
@@ -22,6 +23,8 @@ service Profiles {
     rpc ListProfilePosts (ListProfilePostsRequest) returns (ListProfilePostsReply);
     rpc ListFeedPosts (ListFeedPostsRequest) returns (ListFeedPostsReply);
 }
+
+// Profiles
 
 message CreateProfileRequest {
     UserProfile profile = 1;
@@ -51,6 +54,16 @@ message UpdateProfileRequest {
 
 message UpdateProfileReply {
 }
+
+message SearchProfilesRequest {
+    string query = 1;
+}
+
+message SearchProfilesReply {
+    repeated UserProfile profiles = 1;
+}
+
+// Connections
 
 message RequestConnectionRequest {
     int64 user_id = 1;
@@ -136,6 +149,9 @@ enum ConnectionStatus {
     CONNECTION_STATUS_FOLLOWED = 6;
     CONNECTION_STATUS_GHOST = 7;
 }
+
+
+// Posts
 
 message CreatePostRequest {
     reserved 2; // Audience

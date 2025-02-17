@@ -38,6 +38,10 @@ where
         self.db.update_profile(profile).await
     }
 
+    async fn search_profiles(&self, query: &str) -> Result<Vec<EnigmaUserProfile>, DatabaseError> {
+        self.db.search_profiles(query).await
+    }
+
     async fn request_connection(
         &self,
         user_id: &UserId,

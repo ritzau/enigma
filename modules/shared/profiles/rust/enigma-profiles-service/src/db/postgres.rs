@@ -225,6 +225,34 @@ impl EnigmaProfilesDatabase for PostgresProfilesDatabase {
         Ok(())
     }
 
+    #[instrument(err, skip_all)]
+    async fn search_profiles(&self, query: &str) -> Result<Vec<EnigmaUserProfile>, DatabaseError> {
+        let records = sqlx::query!(
+            "SELECT * FROM user_profiles
+            WHERE legal_name ILIKE $1
+            OR display_name ILIKE $1
+            OR primary_email ILIKE $1",
+            format!("%{}%", query)
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| DatabaseError::IllegalState("Cannot search user profiles", Some(e.into())))?;
+
+        let profiles = records
+            .into_iter()
+            .map(|r| EnigmaUserProfile {
+                user_id: r.user_id.into(),
+                legal_name: r.legal_name,
+                display_name: r.display_name,
+                profile_picture_url: r.profile_picture_url,
+                primary_email: r.primary_email,
+                date_of_birth: r.date_of_birth,
+            })
+            .collect();
+
+        Ok(profiles)
+    }
+
     #[instrument(err, skip(self))]
     async fn request_connection(
         &self,

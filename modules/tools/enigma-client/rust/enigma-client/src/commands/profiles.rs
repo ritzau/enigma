@@ -20,6 +20,9 @@ pub enum ProfilesCommands {
     Get {
         user_id: i64,
     },
+    Search {
+        query: String,
+    },
     Update {
         user_id: i64,
         legal_name: String,
@@ -62,6 +65,17 @@ pub async fn run_command(
         ProfilesCommands::Get { user_id } => {
             let profile = profiles_client.get_profile(&user_id.into()).await?;
             println!("{:?}", profile);
+        }
+        ProfilesCommands::Search { query } => {
+            let profiles = profiles_client.search_profiles(&query).await?;
+            for profile in profiles {
+                println!(
+                    "[{}] {} ({})",
+                    profile.user_id.value(),
+                    profile.display_name,
+                    profile.legal_name
+                );
+            }
         }
         ProfilesCommands::Update {
             user_id,
