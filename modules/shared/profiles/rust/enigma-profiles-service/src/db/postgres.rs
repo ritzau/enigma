@@ -1,4 +1,5 @@
 use crate::db::{DatabaseError, EnigmaProfilesDatabase};
+use crate::ConnectionsCursor;
 use async_trait::async_trait;
 use enigma_auth::UserId;
 use enigma_profiles::{
@@ -16,6 +17,10 @@ use std::time::Duration;
 use tokio::time::sleep;
 use tracing::instrument;
 use uuid::Uuid;
+
+const CURSOR_VERSION: u8 = 1;
+const CURSOR_NONE_SEQ: i64 = -1;
+const DEFAULT_LIMIT: u16 = 100;
 
 #[derive(Clone, Debug)]
 struct ConnectionRecord {
@@ -64,7 +69,8 @@ impl PostgresProfilesDatabase {
                 date_of_birth DATE NOT NULL,
                 FOREIGN KEY (user_id) REFERENCES accounts(user_id)
             )",
-            "CREATE INDEX IF NOT EXISTS idx_birthdays ON user_profiles (EXTRACT(MONTH FROM date_of_birth), EXTRACT(DAY FROM date_of_birth))",
+            "CREATE INDEX IF NOT EXISTS idx_birthdays
+            ON user_profiles (EXTRACT(MONTH FROM date_of_birth), EXTRACT(DAY FROM date_of_birth))",
             "CREATE SEQUENCE IF NOT EXISTS connection_update_seq",
             "CREATE TABLE IF NOT EXISTS connections (
                 connection_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -136,13 +142,13 @@ impl PostgresProfilesDatabase {
         sqlx::query!(
         "UPDATE connections SET status = 'connected', relationship = $3, updated_at = NOW(), update_seq = DEFAULT
         WHERE user_id = $1 AND peer_id = $2",
-            user_id.value(),
-            peer_id.value(),
-            relationship
-        )
-        .execute(tx.as_mut())
-        .await
-        .map_err(|e| DatabaseError::IllegalState("Can't update connection status", Some(e.into())))?;
+        user_id.value(),
+        peer_id.value(),
+        relationship
+    )
+            .execute(tx.as_mut())
+            .await
+            .map_err(|e| DatabaseError::IllegalState("Can't update connection status", Some(e.into())))?;
         Ok(())
     }
 
@@ -182,7 +188,7 @@ impl PostgresProfilesDatabase {
         let status = record
             .status
             .ok_or(DatabaseError::IllegalState("Missing status", None))?;
-        let status: EnigmaConnectionStatus = EnigmaConnectionStatus::try_from(status)
+        let status: EnigmaConnectionStatus = EnigmaConnectionStatus::try_from_sql(&status)
             .map_err(|_| DatabaseError::IllegalState("Failed to convert status", None))?;
 
         Ok(EnigmaConnection {
@@ -540,25 +546,64 @@ impl EnigmaProfilesDatabase for PostgresProfilesDatabase {
     async fn list_connections(
         &self,
         user_id: &UserId,
-    ) -> Result<Vec<EnigmaConnection>, DatabaseError> {
-        let records = sqlx::query_as!(
-            ConnectionRecord,
-            "SELECT connection_id, connections.user_id as user_id, peer_id, relationship,
-                    status::TEXT, created_at, updated_at, update_seq, legal_name, display_name,
-                    profile_picture_url, primary_email, date_of_birth
-            FROM connections
-            INNER JOIN user_profiles ON connections.peer_id = user_profiles.user_id
-            WHERE connections.user_id = $1",
-            user_id.value()
-        )
-        .fetch_all(&self.pool)
-        .await
-        .map_err(|e| DatabaseError::IllegalState("Cannot get connections", Some(e.into())))?;
+        status_filter: &[EnigmaConnectionStatus],
+        cursor: Option<ConnectionsCursor>,
+        limit: Option<u16>,
+    ) -> Result<(Vec<EnigmaConnection>, ConnectionsCursor, bool), DatabaseError> {
+        if limit == Some(0) {
+            return Err(DatabaseError::InvalidArgument(
+                "Limit must be greater than 0",
+                None,
+            ));
+        }
 
-        futures::stream::iter(records)
-            .then(|r| self.build_connection(r))
-            .try_collect()
+        let cursor_update_seq = cursor.map(|c| c.update_seq).unwrap_or(CURSOR_NONE_SEQ);
+        let limit = limit.unwrap_or(DEFAULT_LIMIT);
+
+        let status_filter = status_filter
+            .iter()
+            .map(|s| s.to_sql().to_string())
+            .collect::<Vec<_>>();
+        let include_all = status_filter.is_empty();
+
+        let records = sqlx::query_as!(
+        ConnectionRecord,
+        "SELECT connection_id, connections.user_id as user_id, peer_id, relationship, status::TEXT as status,
+                connections.created_at as created_at, updated_at, update_seq, legal_name,
+                display_name, profile_picture_url, primary_email, date_of_birth
+        FROM connections
+        INNER JOIN user_profiles ON connections.peer_id = user_profiles.user_id
+        WHERE connections.user_id = $1 AND update_seq > $2 AND (status::TEXT = ANY($3) OR $4)
+        ORDER BY update_seq ASC
+        LIMIT $5",
+        user_id.value(),
+        cursor_update_seq,
+        &status_filter,
+        include_all,
+        limit as i64 + 1
+    )
+            .fetch_all(&self.pool)
             .await
+            .map_err(|e| DatabaseError::IllegalState("Cannot get connections", Some(e.into())))?;
+
+        let has_more = records.len() > limit as usize;
+
+        let connections = futures::stream::iter(records.into_iter().take(limit as usize))
+            .then(|r| self.build_connection(r))
+            .try_collect::<Vec<EnigmaConnection>>()
+            .await?;
+
+        let next_cursor = ConnectionsCursor {
+            version: CURSOR_VERSION,
+            user_id: user_id.clone(),
+            update_seq: connections
+                .iter()
+                .map(|c| c.update_seq.expect("Missing update sequence"))
+                .max()
+                .unwrap_or(cursor_update_seq),
+        };
+
+        Ok((connections, next_cursor, has_more))
     }
 
     #[instrument(err, skip(self))]

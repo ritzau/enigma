@@ -1,4 +1,5 @@
-use clap::{Args, Subcommand, ValueEnum};
+use clap::{Args, Subcommand};
+use enigma_profiles::EnigmaConnectionStatus;
 use enigma_profiles_client::EnigmaProfilesClient;
 use std::error::Error;
 
@@ -25,8 +26,14 @@ pub enum ConnectionCommands {
     },
     List {
         #[command(flatten)]
-        relationship: Option<ConnectionKind>,
+        status_filter: Option<StatusKind>,
         user_id: i64,
+        #[arg(short, long)]
+        cursor: Option<String>,
+        #[arg(short, long)]
+        limit: Option<u16>,
+        #[arg(short, long)]
+        all: bool,
     },
     Remove {
         user_id: i64,
@@ -41,7 +48,7 @@ pub enum ConnectionCommands {
 
 #[derive(Args, Debug)]
 #[group(required = false, multiple = false)]
-pub struct ConnectionKind {
+pub struct StatusKind {
     #[arg(long)]
     active: bool,
 
@@ -50,13 +57,6 @@ pub struct ConnectionKind {
 
     #[arg(long)]
     denied: bool,
-}
-
-#[derive(Debug, ValueEnum, Clone)]
-pub enum ConnectionStatus {
-    Active,
-    Requests,
-    Denied,
 }
 
 pub async fn run_command(
@@ -100,16 +100,50 @@ pub async fn run_command(
             println!("Added connection: {:?}", connection);
         }
         ConnectionCommands::List {
-            relationship,
+            status_filter,
             user_id,
+            cursor,
+            limit,
+            all,
         } => {
-            let connections = profiles_client.list_connections(&user_id.into()).await?;
             println!(
                 "Connections for user {} with status {:?}",
-                user_id, relationship
+                user_id, status_filter
             );
-            for (relationship, profile) in connections {
-                println!("{}: {:?}", relationship, profile);
+            let status_filter = match status_filter {
+                Some(status_filter) => {
+                    if status_filter.active {
+                        vec![EnigmaConnectionStatus::Connected]
+                    } else if status_filter.requests {
+                        vec![EnigmaConnectionStatus::Requested]
+                    } else if status_filter.denied {
+                        vec![EnigmaConnectionStatus::Denied]
+                    } else {
+                        vec![]
+                    }
+                }
+                None => vec![],
+            };
+
+            let mut cursor = cursor;
+            loop {
+                let (connections, next_cursor, has_more) = profiles_client
+                    .list_connections(&user_id.into(), &status_filter, cursor.as_deref(), limit)
+                    .await?;
+
+                for connection in connections {
+                    println!(
+                        "{}: {:?}",
+                        connection.relationship, connection.profile.display_name
+                    );
+                }
+                println!("Next cursor: {} has_more: {}", next_cursor, has_more);
+
+                if !all || !has_more {
+                    break;
+                }
+
+                cursor = Some(next_cursor);
             }
         }
         ConnectionCommands::Remove { user_id, peer_id } => {

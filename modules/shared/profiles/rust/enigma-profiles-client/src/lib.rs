@@ -1,6 +1,8 @@
 use async_trait::async_trait;
 use enigma_auth::UserId;
-use enigma_profiles::{EnigmaConnection, EnigmaPost, EnigmaUserProfile, PostId};
+use enigma_profiles::{
+    EnigmaConnection, EnigmaConnectionStatus, EnigmaPost, EnigmaUserProfile, PostId,
+};
 use mockall::automock;
 use std::error::Error;
 
@@ -49,7 +51,10 @@ pub trait EnigmaProfilesClient {
     async fn list_connections(
         &self,
         user_id: &UserId,
-    ) -> Result<Vec<(String, EnigmaUserProfile)>, Box<dyn Error>>;
+        status_filter: &[EnigmaConnectionStatus],
+        cursor: Option<&str>,
+        limit: Option<u16>,
+    ) -> Result<(Vec<EnigmaConnection>, String, bool), Box<dyn Error>>;
 
     async fn add_connection(
         &self,

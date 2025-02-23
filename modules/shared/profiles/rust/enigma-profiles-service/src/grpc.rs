@@ -1,18 +1,20 @@
-use crate::EnigmaProfilesService;
+use crate::{ConnectionsCursor, EnigmaProfilesService};
 use async_trait::async_trait;
 use enigma_auth::{Role, UserId};
 use enigma_auth_grpc::{verify_admin, verify_auth, verify_id_or_admin, verify_role};
-use enigma_profiles::{EnigmaUserProfile, PostId};
+use enigma_profiles::encryption::Encryption;
+use enigma_profiles::{EnigmaConnectionStatus, EnigmaUserProfile, PostId};
 use enigma_profiles_grpc::profiles_server::Profiles;
 use enigma_profiles_grpc::{
     AcceptConnectionReply, AcceptConnectionRequest, AddConnectionReply, AddConnectionRequest,
-    CreatePostReply, CreatePostRequest, CreateProfileReply, CreateProfileRequest, DeletePostReply,
-    DeletePostRequest, DeleteProfileReply, DeleteProfileRequest, GetProfileReply,
-    GetProfileRequest, ListConnectionsReply, ListConnectionsRequest, ListFeedPostsReply,
-    ListFeedPostsRequest, ListProfilePostsReply, ListProfilePostsRequest, RejectConnectionReply,
-    RejectConnectionRequest, RemoveConnectionReply, RemoveConnectionRequest,
-    RequestConnectionReply, RequestConnectionRequest, SearchProfilesReply, SearchProfilesRequest,
-    UpdateConnectionReply, UpdateConnectionRequest, UpdateProfileReply, UpdateProfileRequest,
+    Connection, ConnectionStatus, CreatePostReply, CreatePostRequest, CreateProfileReply,
+    CreateProfileRequest, DeletePostReply, DeletePostRequest, DeleteProfileReply,
+    DeleteProfileRequest, GetProfileReply, GetProfileRequest, ListConnectionsReply,
+    ListConnectionsRequest, ListFeedPostsReply, ListFeedPostsRequest, ListProfilePostsReply,
+    ListProfilePostsRequest, RejectConnectionReply, RejectConnectionRequest, RemoveConnectionReply,
+    RemoveConnectionRequest, RequestConnectionReply, RequestConnectionRequest, SearchProfilesReply,
+    SearchProfilesRequest, UpdateConnectionReply, UpdateConnectionRequest, UpdateProfileReply,
+    UpdateProfileRequest,
 };
 use itertools::Itertools;
 use std::sync::Arc;
@@ -209,19 +211,59 @@ where
         &self,
         request: Request<ListConnectionsRequest>,
     ) -> Result<Response<ListConnectionsReply>, Status> {
+        let encryption = Encryption::default();
+
         let parameters = request.get_ref();
         let user_id = UserId::from(parameters.user_id);
+        let status_filter: Vec<EnigmaConnectionStatus> = parameters
+            .status_filter
+            .iter()
+            .map(|&status| {
+                EnigmaConnectionStatus::from(
+                    ConnectionStatus::try_from(status).unwrap_or(ConnectionStatus::Unspecified),
+                )
+            })
+            .collect();
+        let cursor = parameters.cursor.as_deref();
+        let limit = parameters
+            .limit
+            .map(|limit| {
+                limit
+                    .try_into()
+                    .map_err(|_| Status::invalid_argument("Invalid limit"))
+            })
+            .transpose()?;
 
         verify_id_or_admin(&request, &user_id).await?;
 
-        let result = self.profiles_service.list_connections(&user_id).await;
-        let proto_connections = result.map_err(|_| Status::internal("Cannot get connections"))?;
+        let cursor = cursor
+            .and_then(|c| encryption.decrypt(c))
+            .map(|c| {
+                ConnectionsCursor::try_from(c.to_string())
+                    .map_err(|_| Status::invalid_argument("Invalid cursor"))
+            })
+            .transpose()?;
+
+        let result = self
+            .profiles_service
+            .list_connections(&user_id, &status_filter, cursor, limit)
+            .await;
+        let (proto_connections, next_cursor, has_more) =
+            result.map_err(|_| Status::internal("Cannot get connections"))?;
         let connections = proto_connections
             .into_iter()
-            .map(|connection| connection.try_into())
+            .map(Connection::try_from)
             .try_collect()?;
 
-        Ok(Response::new(ListConnectionsReply { connections }))
+        let next_cursor =
+            String::try_from(next_cursor).map_err(|e| Status::internal(e.to_string()))?;
+        let encrypted_cursor = encryption.encrypt(next_cursor.as_str());
+
+        Ok(Response::new(ListConnectionsReply {
+            connections,
+            next_cursor: encrypted_cursor,
+            has_more,
+        }))
     }
 
     #[instrument(err, skip_all)]
