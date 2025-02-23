@@ -106,10 +106,15 @@ message RejectConnectionReply {
 
 message ListConnectionsRequest {
     int64 user_id = 1;
+    repeated ConnectionStatus status_filter = 2;
+    optional string cursor = 3;
+    optional uint32 limit = 4;
 }
 
 message ListConnectionsReply {
     repeated Connection connections = 1;
+    string next_cursor = 2;
+    bool has_more = 3;
 }
 
 message Connection {

@@ -1,7 +1,31 @@
 use chrono::NaiveDate;
 use enigma_auth::UserId;
-use std::fmt::Display;
+use std::fmt::{Display, Formatter};
 use uuid::Uuid;
+
+pub mod encryption;
+
+////////////////////////////////////////////////////////////////////////////////
+// EnigmaError
+
+#[derive(Debug)]
+pub enum EnigmaError {
+    InvalidArgument(String, Option<Box<dyn std::error::Error>>),
+    IllegalState(String, Option<Box<dyn std::error::Error>>),
+}
+
+impl Display for EnigmaError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            EnigmaError::InvalidArgument(msg, None) | EnigmaError::IllegalState(msg, None) => {
+                write!(f, "{}", msg)
+            }
+
+            EnigmaError::InvalidArgument(msg, Some(err))
+            | EnigmaError::IllegalState(msg, Some(err)) => write!(f, "{} ({})", msg, err),
+        }
+    }
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // EnigmaConnectionId
@@ -130,6 +154,39 @@ pub enum EnigmaConnectionStatus {
     Ghost,
 }
 
+impl EnigmaConnectionStatus {
+    pub fn try_from_sql(sql: &str) -> Result<Self, EnigmaError> {
+        match sql {
+            "request_sent" => Ok(EnigmaConnectionStatus::RequestSent),
+            "requested" => Ok(EnigmaConnectionStatus::Requested),
+            "connected" => Ok(EnigmaConnectionStatus::Connected),
+            "deleted" => Ok(EnigmaConnectionStatus::Deleted),
+            "denied" => Ok(EnigmaConnectionStatus::Denied),
+            "follower" => Ok(EnigmaConnectionStatus::Follower),
+            "followed" => Ok(EnigmaConnectionStatus::Followed),
+            "ghost" => Ok(EnigmaConnectionStatus::Ghost),
+            _ => Err(EnigmaError::InvalidArgument(
+                format!("Invalid SQL value: {}", sql),
+                None,
+            )),
+        }
+    }
+
+    pub fn to_sql(&self) -> &'static str {
+        match self {
+            EnigmaConnectionStatus::Unspecified => "unspecified",
+            EnigmaConnectionStatus::RequestSent => "request_sent",
+            EnigmaConnectionStatus::Requested => "requested",
+            EnigmaConnectionStatus::Connected => "connected",
+            EnigmaConnectionStatus::Deleted => "deleted",
+            EnigmaConnectionStatus::Denied => "denied",
+            EnigmaConnectionStatus::Follower => "follower",
+            EnigmaConnectionStatus::Followed => "followed",
+            EnigmaConnectionStatus::Ghost => "ghost",
+        }
+    }
+}
+
 impl Display for EnigmaConnectionStatus {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -152,10 +209,10 @@ impl TryFrom<&str> for EnigmaConnectionStatus {
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
             "Unspecified" => Ok(EnigmaConnectionStatus::Unspecified),
-            "Request Sent" | "request_sent" => Ok(EnigmaConnectionStatus::RequestSent),
+            "Request Sent" => Ok(EnigmaConnectionStatus::RequestSent),
             "Requested" => Ok(EnigmaConnectionStatus::Requested),
-            "Connected" | "connected" => Ok(EnigmaConnectionStatus::Connected),
-            "Deleted" | "deleted" => Ok(EnigmaConnectionStatus::Deleted),
+            "Connected" => Ok(EnigmaConnectionStatus::Connected),
+            "Deleted" => Ok(EnigmaConnectionStatus::Deleted),
             "Denied" => Ok(EnigmaConnectionStatus::Denied),
             "Follower" => Ok(EnigmaConnectionStatus::Follower),
             "Followed" => Ok(EnigmaConnectionStatus::Followed),

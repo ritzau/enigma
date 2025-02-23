@@ -4,12 +4,14 @@ use enigma_auth::UserId;
 use enigma_auth_client::authenticator::Authenticator;
 use enigma_auth_client::session::Session;
 use enigma_auth_grpc::auth_client::AuthClient;
-use enigma_profiles::{EnigmaConnection, EnigmaPost, EnigmaUserProfile, PostId};
+use enigma_profiles::{
+    EnigmaConnection, EnigmaConnectionStatus, EnigmaPost, EnigmaUserProfile, PostId,
+};
 use enigma_profiles_grpc::profiles_client::ProfilesClient;
 use enigma_profiles_grpc::{
-    AcceptConnectionRequest, AddConnectionRequest, CreatePostRequest, CreateProfileRequest,
-    DeletePostRequest, DeleteProfileRequest, GetProfileRequest, ListConnectionsRequest,
-    ListFeedPostsRequest, ListProfilePostsRequest, RejectConnectionRequest,
+    AcceptConnectionRequest, AddConnectionRequest, ConnectionStatus, CreatePostRequest,
+    CreateProfileRequest, DeletePostRequest, DeleteProfileRequest, GetProfileRequest,
+    ListConnectionsRequest, ListFeedPostsRequest, ListProfilePostsRequest, RejectConnectionRequest,
     RemoveConnectionRequest, RequestConnectionRequest, SearchProfilesRequest,
     UpdateConnectionRequest, UpdateProfileRequest, UserProfile,
 };
@@ -263,12 +265,21 @@ where
     async fn list_connections(
         &self,
         user_id: &UserId,
-    ) -> Result<Vec<(String, EnigmaUserProfile)>, Box<dyn Error>> {
+        status_filter: &[EnigmaConnectionStatus],
+        cursor: Option<&str>,
+        limit: Option<u16>,
+    ) -> Result<(Vec<EnigmaConnection>, String, bool), Box<dyn Error>> {
         let reply = self
             .authenticator
             .authenticated_call(
                 || ListConnectionsRequest {
                     user_id: user_id.value(),
+                    status_filter: status_filter
+                        .iter()
+                        .map(|s| ConnectionStatus::from(s.clone()).into())
+                        .collect(),
+                    cursor: cursor.map(|c| c.to_string()),
+                    limit: limit.map(|l| l as u32),
                 },
                 |request| {
                     let client = self.client.clone();
@@ -277,22 +288,21 @@ where
             )
             .await?;
 
-        Ok(reply
-            .into_inner()
+        let reply = reply.into_inner();
+
+        let connections = reply
             .connections
             .into_iter()
             .map(|c| {
-                let Some(ref profile) = c.profile else {
+                let Some(ref _profile) = c.profile else {
                     return Err("Missing profile");
                 };
 
-                let Ok(profile) = EnigmaUserProfile::try_from(profile) else {
-                    return Err("Invalid profile");
-                };
-
-                Ok((c.relationship, profile))
+                c.try_into().map_err(|_| "Failed to convert connection")
             })
-            .try_collect()?)
+            .try_collect()?;
+
+        Ok((connections, reply.next_cursor, reply.has_more))
     }
 
     async fn add_connection(

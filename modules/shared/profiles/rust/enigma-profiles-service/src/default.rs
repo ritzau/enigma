@@ -1,8 +1,10 @@
 use crate::db::{DatabaseError, EnigmaProfilesDatabase};
-use crate::EnigmaProfilesService;
+use crate::{ConnectionsCursor, EnigmaProfilesService};
 use async_trait::async_trait;
 use enigma_auth::UserId;
-use enigma_profiles::{EnigmaConnection, EnigmaPost, EnigmaUserProfile, PostId};
+use enigma_profiles::{
+    EnigmaConnection, EnigmaConnectionStatus, EnigmaPost, EnigmaUserProfile, PostId,
+};
 
 pub struct DefaultProfilesService<DB>
 where
@@ -79,8 +81,13 @@ where
     async fn list_connections(
         &self,
         user_id: &UserId,
-    ) -> Result<Vec<EnigmaConnection>, DatabaseError> {
-        self.db.list_connections(user_id).await
+        status_filter: &[EnigmaConnectionStatus],
+        cursor: Option<ConnectionsCursor>,
+        limit: Option<u16>,
+    ) -> Result<(Vec<EnigmaConnection>, ConnectionsCursor, bool), DatabaseError> {
+        self.db
+            .list_connections(user_id, status_filter, cursor, limit)
+            .await
     }
 
     async fn add_connection(
