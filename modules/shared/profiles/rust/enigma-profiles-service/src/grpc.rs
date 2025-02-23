@@ -1,7 +1,8 @@
-use crate::EnigmaProfilesService;
+use crate::{ConnectionsCursor, EnigmaProfilesService};
 use async_trait::async_trait;
 use enigma_auth::{Role, UserId};
 use enigma_auth_grpc::{verify_admin, verify_auth, verify_id_or_admin, verify_role};
+use enigma_profiles::encryption::Encryption;
 use enigma_profiles::{EnigmaUserProfile, PostId};
 use enigma_profiles_grpc::profiles_server::Profiles;
 use enigma_profiles_grpc::{
@@ -154,9 +155,12 @@ where
             .profiles_service
             .request_connection(&user_id, &peer_id, relationship)
             .await;
-        result.map_err(|_| Status::invalid_argument("Cannot request connection"))?;
+        let connection =
+            result.map_err(|_| Status::invalid_argument("Cannot request connection"))?;
 
-        Ok(Response::new(RequestConnectionReply {}))
+        Ok(Response::new(RequestConnectionReply {
+            connection: Some(connection.try_into()?),
+        }))
     }
 
     async fn accept_connection(
@@ -174,9 +178,12 @@ where
             .profiles_service
             .accept_connection(&user_id, &peer_id, relationship)
             .await;
-        result.map_err(|_| Status::invalid_argument("Cannot request connection"))?;
+        let connection =
+            result.map_err(|_| Status::invalid_argument("Cannot request connection"))?;
 
-        Ok(Response::new(AcceptConnectionReply {}))
+        Ok(Response::new(AcceptConnectionReply {
+            connection: Some(connection.try_into()?),
+        }))
     }
 
     async fn reject_connection(
@@ -203,25 +210,50 @@ where
         &self,
         request: Request<ListConnectionsRequest>,
     ) -> Result<Response<ListConnectionsReply>, Status> {
+        let encryption = Encryption::default();
+
         let parameters = request.get_ref();
         let user_id = UserId::from(parameters.user_id);
+        let cursor = parameters.cursor.as_deref();
+        let limit = parameters
+            .limit
+            .map(|limit| {
+                limit
+                    .try_into()
+                    .map_err(|_| Status::invalid_argument("Invalid limit"))
+            })
+            .transpose()?;
 
         verify_id_or_admin(&request, &user_id).await?;
 
-        let result = self.profiles_service.list_connections(&user_id).await;
-        let proto_connections = result.map_err(|_| Status::internal("Cannot get connections"))?;
+        let cursor = cursor
+            .and_then(|c| encryption.decrypt(c))
+            .map(|c| {
+                ConnectionsCursor::try_from(c.to_string())
+                    .map_err(|_| Status::invalid_argument("Invalid cursor"))
+            })
+            .transpose()?;
+
+        let result = self
+            .profiles_service
+            .list_connections(&user_id, cursor, limit)
+            .await;
+        let (proto_connections, next_cursor, has_more) =
+            result.map_err(|_| Status::internal("Cannot get connections"))?;
         let connections = proto_connections
             .into_iter()
-            .map(|(relationship, profile)| {
-                let profile = profile.try_into()?;
-                Ok::<Connection, Status>(Connection {
-                    relationship,
-                    profile: Some(profile),
-                })
-            })
+            .map(Connection::try_from)
             .try_collect()?;
 
-        Ok(Response::new(ListConnectionsReply { connections }))
+        let next_cursor =
+            String::try_from(next_cursor).map_err(|e| Status::internal(e.to_string()))?;
+        let encrypted_cursor = encryption.encrypt(next_cursor.as_str());
+
+        Ok(Response::new(ListConnectionsReply {
+            connections,
+            next_cursor: encrypted_cursor,
+            has_more,
+        }))
     }
 
     #[instrument(err, skip_all)]
@@ -240,9 +272,11 @@ where
             .profiles_service
             .add_connection(&user_id, &peer_id, relationship)
             .await;
-        result.map_err(|_| Status::invalid_argument("Cannot add connection"))?;
+        let connection = result.map_err(|_| Status::invalid_argument("Cannot add connection"))?;
 
-        Ok(Response::new(AddConnectionReply {}))
+        Ok(Response::new(AddConnectionReply {
+            connection: Some(connection.try_into()?),
+        }))
     }
 
     #[instrument(err, skip_all)]
@@ -281,9 +315,12 @@ where
             .profiles_service
             .update_connection(&user_id, &peer_id, relationship)
             .await;
-        result.map_err(|_| Status::invalid_argument("Cannot update connection"))?;
+        let connection =
+            result.map_err(|_| Status::invalid_argument("Cannot update connection"))?;
 
-        Ok(Response::new(UpdateConnectionReply {}))
+        Ok(Response::new(UpdateConnectionReply {
+            connection: Some(connection.try_into()?),
+        }))
     }
 
     // Posts

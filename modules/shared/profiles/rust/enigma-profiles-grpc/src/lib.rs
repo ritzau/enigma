@@ -1,10 +1,106 @@
 #![allow(clippy::match_single_binding)]
 
-use chrono::DateTime;
-use enigma_profiles::EnigmaUserProfile;
+use chrono::{DateTime, Utc};
+use enigma_profiles::{EnigmaConnection, EnigmaConnectionStatus, EnigmaUserProfile};
+use prost_types::Timestamp;
 use tonic::Status;
 
 tonic::include_proto!("profiles");
+
+////////////////////////////////////////
+// Connection Status
+
+impl From<EnigmaConnectionStatus> for ConnectionStatus {
+    fn from(value: EnigmaConnectionStatus) -> Self {
+        match value {
+            EnigmaConnectionStatus::Unspecified => Self::Unspecified,
+            EnigmaConnectionStatus::RequestSent => Self::RequestSent,
+            EnigmaConnectionStatus::Requested => Self::Requested,
+            EnigmaConnectionStatus::Connected => Self::Connected,
+            EnigmaConnectionStatus::Deleted => Self::Deleted,
+            EnigmaConnectionStatus::Denied => Self::Denied,
+            EnigmaConnectionStatus::Follower => Self::Follower,
+            EnigmaConnectionStatus::Followed => Self::Followed,
+            EnigmaConnectionStatus::Ghost => Self::Ghost,
+        }
+    }
+}
+
+impl From<ConnectionStatus> for EnigmaConnectionStatus {
+    fn from(value: ConnectionStatus) -> Self {
+        match value {
+            ConnectionStatus::Unspecified => Self::Unspecified,
+            ConnectionStatus::RequestSent => Self::RequestSent,
+            ConnectionStatus::Requested => Self::Requested,
+            ConnectionStatus::Connected => Self::Connected,
+            ConnectionStatus::Deleted => Self::Deleted,
+            ConnectionStatus::Denied => Self::Denied,
+            ConnectionStatus::Follower => Self::Follower,
+            ConnectionStatus::Followed => Self::Followed,
+            ConnectionStatus::Ghost => Self::Ghost,
+        }
+    }
+}
+
+////////////////////////////////////////
+// Connection
+
+impl TryFrom<EnigmaConnection> for Connection {
+    type Error = Status;
+
+    fn try_from(connection: EnigmaConnection) -> Result<Self, Self::Error> {
+        Ok(Self {
+            connection_id: connection.connection_id.to_string(),
+            user_id: connection.user_id.into(),
+            peer_id: connection.peer_id.into(),
+            relationship: connection.relationship,
+            status: ConnectionStatus::from(connection.status).into(),
+            created_at: Some(chrono_to_protobuf_timestamp(connection.created_at)),
+            updated_at: Some(chrono_to_protobuf_timestamp(connection.updated_at)),
+            profile: Some(connection.profile.try_into()?),
+        })
+    }
+}
+
+impl TryFrom<Connection> for EnigmaConnection {
+    type Error = Status;
+
+    fn try_from(connection: Connection) -> Result<Self, Self::Error> {
+        let status = ConnectionStatus::try_from(connection.status)
+            .map_err(|_| Status::invalid_argument("Invalid status"))?;
+
+        Ok(Self {
+            connection_id: connection
+                .connection_id
+                .as_str()
+                .try_into()
+                .map_err(|_| Status::invalid_argument("Invalid UUID"))?,
+            user_id: connection.user_id.into(),
+            peer_id: connection.peer_id.into(),
+            relationship: connection.relationship,
+            status: status.into(),
+            created_at: protobuf_to_chrono_timestamp(
+                &connection
+                    .created_at
+                    .ok_or(Status::internal("Missing creation date"))?,
+            )?,
+            updated_at: protobuf_to_chrono_timestamp(
+                &connection
+                    .updated_at
+                    .ok_or(Status::internal("Missing update date"))?,
+            )?,
+            update_seq: None,
+            profile: EnigmaUserProfile::try_from(
+                connection
+                    .profile
+                    .ok_or(Status::invalid_argument("Missing profile"))?,
+            )?,
+        })
+    }
+}
+
+////////////////////////////////////////
+// User profile
 
 impl TryFrom<EnigmaUserProfile> for UserProfile {
     type Error = Status;
@@ -84,6 +180,9 @@ impl TryFrom<&UserProfile> for EnigmaUserProfile {
     }
 }
 
+////////////////////////////////////////
+// Post
+
 impl TryFrom<enigma_profiles::EnigmaPost> for Post {
     type Error = Status;
 
@@ -140,4 +239,16 @@ impl TryFrom<&Post> for enigma_profiles::EnigmaPost {
             content: value.content.clone(),
         })
     }
+}
+
+fn chrono_to_protobuf_timestamp(dt: DateTime<Utc>) -> Timestamp {
+    Timestamp {
+        seconds: dt.timestamp(),
+        nanos: dt.timestamp_subsec_nanos() as i32,
+    }
+}
+
+fn protobuf_to_chrono_timestamp(ts: &Timestamp) -> Result<DateTime<Utc>, Status> {
+    DateTime::<Utc>::from_timestamp(ts.seconds, ts.nanos as u32)
+        .ok_or(Status::invalid_argument("Invalid timestamp"))
 }

@@ -1,9 +1,14 @@
 use crate::db::{DatabaseError, EnigmaProfilesDatabase};
+use crate::ConnectionsCursor;
 use async_trait::async_trait;
 use enigma_auth::UserId;
-use enigma_profiles::{EnigmaPost, EnigmaUserProfile, PostId};
+use enigma_profiles::{
+    EnigmaConnection, EnigmaConnectionStatus, EnigmaPost, EnigmaUserProfile, PostId,
+};
+use futures::stream::{StreamExt, TryStreamExt};
 use rand::Rng;
 use sqlx::postgres::PgDatabaseError;
+use sqlx::types::chrono;
 use sqlx::types::chrono::{TimeZone, Utc};
 use sqlx::{Error, PgPool, Pool, Postgres, Transaction};
 use std::env;
@@ -43,7 +48,9 @@ impl PostgresProfilesDatabase {
                 date_of_birth DATE NOT NULL,
                 FOREIGN KEY (user_id) REFERENCES accounts(user_id)
             )",
-            "CREATE INDEX IF NOT EXISTS idx_birthdays ON user_profiles (EXTRACT(MONTH FROM date_of_birth), EXTRACT(DAY FROM date_of_birth))",
+            "CREATE INDEX IF NOT EXISTS idx_birthdays
+            ON user_profiles (EXTRACT(MONTH FROM date_of_birth), EXTRACT(DAY FROM date_of_birth))",
+            "CREATE SEQUENCE IF NOT EXISTS connection_update_seq",
             "CREATE TABLE IF NOT EXISTS connections (
                 connection_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 user_id BIGINT NOT NULL,
@@ -52,6 +59,7 @@ impl PostgresProfilesDatabase {
                 status CONNECTION_STATUS NOT NULL DEFAULT 'requested',
                 created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                update_seq BIGINT NOT NULL DEFAULT nextval('connection_update_seq'),
                 FOREIGN KEY (user_id) REFERENCES accounts(user_id) ON DELETE CASCADE,
                 FOREIGN KEY (peer_id) REFERENCES accounts(user_id) ON DELETE CASCADE
             )",
@@ -99,7 +107,7 @@ impl PostgresProfilesDatabase {
         .map_err(|e| DatabaseError::IllegalState("Can't lock connection rows", Some(e.into())))?;
 
         sqlx::query!(
-            "UPDATE connections SET status = 'connected', updated_at = NOW()
+            "UPDATE connections SET status = 'connected', updated_at = NOW(), update_seq = DEFAULT
         WHERE user_id = $2 AND peer_id = $1",
             user_id.value(),
             peer_id.value()
@@ -111,23 +119,73 @@ impl PostgresProfilesDatabase {
         })?;
 
         sqlx::query!(
-            "UPDATE connections SET status = 'connected', relationship = $3, updated_at = NOW()
+        "UPDATE connections SET status = 'connected', relationship = $3, updated_at = NOW(), update_seq = DEFAULT
         WHERE user_id = $1 AND peer_id = $2",
-            user_id.value(),
-            peer_id.value(),
-            relationship
-        )
-        .execute(tx.as_mut())
-        .await
-        .map_err(|e| {
-            DatabaseError::IllegalState("Can't update connection status", Some(e.into()))
-        })?;
+        user_id.value(),
+        peer_id.value(),
+        relationship
+    )
+            .execute(tx.as_mut())
+            .await
+            .map_err(|e| DatabaseError::IllegalState("Can't update connection status", Some(e.into())))?;
 
         Ok(())
     }
+
+    async fn build_connection(
+        &self,
+        record: ConnectionRecord,
+    ) -> Result<EnigmaConnection, DatabaseError> {
+        let has_profile_data = record.legal_name.is_some()
+            && record.display_name.is_some()
+            && record.profile_picture_url.is_some()
+            && record.primary_email.is_some()
+            && record.date_of_birth.is_some();
+
+        let profile = if has_profile_data {
+            EnigmaUserProfile {
+                user_id: record.peer_id.into(),
+                legal_name: record
+                    .legal_name
+                    .ok_or(DatabaseError::IllegalState("Missing legal name", None))?,
+                display_name: record
+                    .display_name
+                    .ok_or(DatabaseError::IllegalState("Missing display name", None))?,
+                profile_picture_url: record
+                    .profile_picture_url
+                    .ok_or(DatabaseError::IllegalState("Missing profile picture", None))?,
+                primary_email: record
+                    .primary_email
+                    .ok_or(DatabaseError::IllegalState("Missing primary email", None))?,
+                date_of_birth: record
+                    .date_of_birth
+                    .ok_or(DatabaseError::IllegalState("Missing data of birth", None))?,
+            }
+        } else {
+            self.get_profile(&record.peer_id.into()).await?
+        };
+
+        let status = record
+            .status
+            .ok_or(DatabaseError::IllegalState("Missing status", None))?;
+        let status: EnigmaConnectionStatus = EnigmaConnectionStatus::try_from(status)
+            .map_err(|_| DatabaseError::IllegalState("Failed to convert status", None))?;
+
+        Ok(EnigmaConnection {
+            connection_id: record.connection_id.into(),
+            user_id: record.user_id.into(),
+            peer_id: record.peer_id.into(),
+            relationship: record.relationship,
+            status,
+            created_at: record.created_at.and_utc(),
+            updated_at: record.updated_at.and_utc(),
+            update_seq: Some(record.update_seq),
+            profile,
+        })
+    }
 }
 
-pub async fn ensure_enum_exists(pool: &PgPool) -> Result<(), Error> {
+async fn ensure_enum_exists(pool: &PgPool) -> Result<(), Error> {
     let exists: (bool,) = sqlx::query_as(
         "SELECT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'connection_status');",
     )
@@ -140,6 +198,7 @@ pub async fn ensure_enum_exists(pool: &PgPool) -> Result<(), Error> {
                 'request_sent',
                 'requested',
                 'connected',
+                'deleted',
                 'denied',
                 'follower',
                 'followed',
@@ -259,7 +318,7 @@ impl EnigmaProfilesDatabase for PostgresProfilesDatabase {
         user_id: &UserId,
         peer_id: &UserId,
         relationship: &str,
-    ) -> Result<(), DatabaseError> {
+    ) -> Result<EnigmaConnection, DatabaseError> {
         let mut tx =
             self.pool.begin().await.map_err(|e| {
                 DatabaseError::IllegalState("Can't create transaction", Some(e.into()))
@@ -267,10 +326,10 @@ impl EnigmaProfilesDatabase for PostgresProfilesDatabase {
 
         // Check if the reverse request already exists
         let existing_request = sqlx::query!(
-        "SELECT status::TEXT AS status FROM connections WHERE user_id = $1 AND peer_id = $2 FOR UPDATE",
-        peer_id.value(),
-        user_id.value()
-    )
+            "SELECT status::TEXT AS status FROM connections WHERE user_id = $1 AND peer_id = $2 FOR UPDATE",
+            peer_id.value(),
+            user_id.value()
+        )
             .fetch_optional(tx.as_mut())
             .await
             .map_err(|e| DatabaseError::IllegalState("Can't check for existing request", Some(e.into())))?;
@@ -284,7 +343,8 @@ impl EnigmaProfilesDatabase for PostgresProfilesDatabase {
             tx.commit().await.map_err(|e| {
                 DatabaseError::IllegalState("Can't commit transaction", Some(e.into()))
             })?;
-            return Ok(());
+
+            return self.get_connection(user_id, peer_id).await;
         }
 
         // Otherwise, insert a new connection request
@@ -317,7 +377,10 @@ impl EnigmaProfilesDatabase for PostgresProfilesDatabase {
         tx.commit()
             .await
             .map_err(|e| DatabaseError::IllegalState("Can't commit transaction", Some(e.into())))?;
-        Ok(())
+
+        let connection = self.get_connection(user_id, peer_id).await?;
+
+        Ok(connection)
     }
 
     #[instrument(err, skip(self))]
@@ -326,7 +389,7 @@ impl EnigmaProfilesDatabase for PostgresProfilesDatabase {
         user_id: &UserId,
         peer_id: &UserId,
         relationship: &str,
-    ) -> Result<(), DatabaseError> {
+    ) -> Result<EnigmaConnection, DatabaseError> {
         let mut tx =
             self.pool.begin().await.map_err(|e| {
                 DatabaseError::IllegalState("Can't create transaction", Some(e.into()))
@@ -338,7 +401,8 @@ impl EnigmaProfilesDatabase for PostgresProfilesDatabase {
         tx.commit()
             .await
             .map_err(|e| DatabaseError::IllegalState("Can't commit transaction", Some(e.into())))?;
-        Ok(())
+
+        Ok(self.get_connection(user_id, peer_id).await?)
     }
 
     #[instrument(err, skip(self))]
@@ -364,12 +428,11 @@ impl EnigmaProfilesDatabase for PostgresProfilesDatabase {
         .await
         .map_err(|e| DatabaseError::IllegalState("Can't lock connection row", Some(e.into())))?;
 
-        if existing_request.is_none() {
+        let Some(existing_request) = existing_request else {
             return Err(DatabaseError::NotFound("No pending request found", None));
-        }
+        };
 
-        let status = existing_request.unwrap().status;
-        if status != Some("requested".to_string()) {
+        if existing_request.status != Some("requested".to_string()) {
             return Err(DatabaseError::IllegalState(
                 "Connection request is not pending",
                 None,
@@ -378,7 +441,7 @@ impl EnigmaProfilesDatabase for PostgresProfilesDatabase {
 
         // Update the peer's connection request status to 'denied'
         sqlx::query!(
-            "UPDATE connections SET status = 'denied', updated_at = NOW()
+            "UPDATE connections SET status = 'denied', updated_at = NOW(), update_seq = DEFAULT
          WHERE user_id = $1 AND peer_id = $2",
             user_id.value(),
             peer_id.value()
@@ -401,49 +464,102 @@ impl EnigmaProfilesDatabase for PostgresProfilesDatabase {
         user_id: &UserId,
         peer_id: &UserId,
         relationship: &str,
-    ) -> Result<(), DatabaseError> {
-        sqlx::query!(
-            "INSERT INTO connections (user_id, peer_id, relationship) VALUES ($1, $2, $3)",
+    ) -> Result<EnigmaConnection, DatabaseError> {
+        let connection = sqlx::query_as!(
+            ConnectionRecord,
+            "INSERT INTO connections (user_id, peer_id, relationship) \
+            VALUES ($1, $2, $3)\
+            RETURNING connection_id, user_id, peer_id, relationship, status::TEXT as status,
+                       created_at, updated_at, update_seq, NULL as legal_name, NULL as display_name,
+                       NULL as profile_picture_url, NULL as primary_email, NULL::DATE as date_of_birth",
             user_id.value(),
             peer_id.value(),
             relationship
         )
-        .execute(&self.pool)
+        .fetch_one(&self.pool)
         .await
         .map_err(|e| DatabaseError::IllegalState("Cannot add connection", Some(e.into())))?;
 
-        Ok(())
+        Ok(self.build_connection(connection).await?)
+    }
+
+    #[instrument(err, skip_all)]
+    async fn get_connection(
+        &self,
+        user_id: &UserId,
+        peer_id: &UserId,
+    ) -> Result<EnigmaConnection, DatabaseError> {
+        let mut records = sqlx::query_as!(
+            ConnectionRecord,
+            "SELECT connection_id, connections.user_id as user_id, peer_id, relationship, status::TEXT as status,
+                    connections.created_at as created_at, updated_at, update_seq, legal_name,
+                    display_name, profile_picture_url, primary_email, date_of_birth
+            FROM connections
+            INNER JOIN user_profiles ON connections.peer_id = user_profiles.user_id
+            WHERE connections.user_id = $1 AND connections.peer_id = $2",
+            user_id.value(),
+            peer_id.value()
+        )
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|e| DatabaseError::IllegalState("Cannot get connections", Some(e.into())))?;
+
+        if records.is_empty() {
+            return Err(DatabaseError::NotFound("Connection not found", None));
+        }
+
+        if records.len() > 1 {
+            return Err(DatabaseError::IllegalState(
+                "Multiple connections found",
+                None,
+            ));
+        }
+
+        self.build_connection(records.remove(0)).await
     }
 
     #[instrument(err, skip_all)]
     async fn list_connections(
         &self,
         user_id: &UserId,
-    ) -> Result<Vec<(String, EnigmaUserProfile)>, DatabaseError> {
-        let records = sqlx::query!(
-            "SELECT relationship, peer_id, legal_name, display_name, profile_picture_url, primary_email, date_of_birth
+        cursor: Option<ConnectionsCursor>,
+        limit: Option<u16>,
+    ) -> Result<(Vec<EnigmaConnection>, ConnectionsCursor, bool), DatabaseError> {
+        // FIXME: Order by update seq and limit
+        let records = sqlx::query_as!(
+            ConnectionRecord,
+            "SELECT connection_id, connections.user_id as user_id, peer_id, relationship, status::TEXT as status,
+                    connections.created_at as created_at, updated_at, update_seq, legal_name,
+                    display_name, profile_picture_url, primary_email, date_of_birth
             FROM connections
             INNER JOIN user_profiles ON connections.peer_id = user_profiles.user_id
-            WHERE connections.user_id = $1",
-            user_id.value()
-        ).fetch_all(&self.pool).await.map_err(|e| DatabaseError::IllegalState("Cannot get connections", Some(e.into())))?;
+            WHERE connections.user_id = $1 AND update_seq > $2
+            ORDER BY update_seq ASC
+            LIMIT $3",
+            user_id.value(),
+            cursor.map(|c| c.update_seq).unwrap_or(0),
+            limit.unwrap_or(100) as i64 // FIXME
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| DatabaseError::IllegalState("Cannot get connections", Some(e.into())))?;
 
-        Ok(records
-            .into_iter()
-            .map(|r| {
-                (
-                    r.relationship,
-                    EnigmaUserProfile {
-                        user_id: r.peer_id.into(),
-                        legal_name: r.legal_name,
-                        display_name: r.display_name,
-                        profile_picture_url: r.profile_picture_url,
-                        primary_email: r.primary_email,
-                        date_of_birth: r.date_of_birth,
-                    },
-                )
-            })
-            .collect())
+        let connections = futures::stream::iter(records)
+            .then(|r| self.build_connection(r))
+            .try_collect::<Vec<EnigmaConnection>>()
+            .await?;
+
+        let next_cursor = ConnectionsCursor {
+            version: 1, // FIXME
+            user_id: user_id.clone(),
+            update_seq: connections
+                .iter()
+                .map(|c| c.update_seq.unwrap_or(0))
+                .max()
+                .unwrap_or(0), // FIXME
+        };
+
+        Ok((connections, next_cursor, false))
     }
 
     #[instrument(err, skip(self))]
@@ -470,18 +586,24 @@ impl EnigmaProfilesDatabase for PostgresProfilesDatabase {
         user_id: &UserId,
         peer_id: &UserId,
         relationship: &str,
-    ) -> Result<(), DatabaseError> {
-        sqlx::query!(
-            "UPDATE connections SET relationship = $3 WHERE user_id = $1 AND peer_id = $2",
+    ) -> Result<EnigmaConnection, DatabaseError> {
+        let record = sqlx::query_as!(
+            ConnectionRecord,
+            "UPDATE connections
+             SET relationship = $3, updated_at = now(), update_seq = DEFAULT
+             WHERE user_id = $1 AND peer_id = $2
+             RETURNING connection_id, user_id, peer_id, relationship, status::TEXT as status,
+                       created_at, updated_at, update_seq, NULL as legal_name, NULL as display_name,
+                       NULL as profile_picture_url, NULL as primary_email, NULL::DATE as date_of_birth",
             user_id.value(),
             peer_id.value(),
             relationship
         )
-        .execute(&self.pool)
-        .await
-        .expect("Cannot update connection");
+            .fetch_one(&self.pool)
+            .await
+            .map_err(|e| DatabaseError::IllegalState("Cannot update connection", Some(e.into())))?;
 
-        Ok(())
+        self.build_connection(record).await
     }
 
     #[instrument(err, skip(self))]
@@ -637,4 +759,21 @@ fn is_unique_violation(err: &dyn sqlx::error::DatabaseError) -> bool {
 fn random_delay() -> u64 {
     let mut rng = rand::rng();
     rng.random_range(MIN_RETRY_DELAY_MS..=MAX_RETRY_DELAY_MS)
+}
+
+#[derive(Clone, Debug)]
+struct ConnectionRecord {
+    connection_id: Uuid,
+    user_id: i64,
+    peer_id: i64,
+    relationship: String,
+    status: Option<String>,
+    created_at: chrono::NaiveDateTime,
+    updated_at: chrono::NaiveDateTime,
+    update_seq: i64,
+    legal_name: Option<String>,
+    display_name: Option<String>,
+    profile_picture_url: Option<String>,
+    primary_email: Option<String>,
+    date_of_birth: Option<chrono::NaiveDate>,
 }

@@ -27,6 +27,10 @@ pub enum ConnectionCommands {
         #[command(flatten)]
         relationship: Option<ConnectionKind>,
         user_id: i64,
+        #[arg(short, long)]
+        cursor: Option<String>,
+        #[arg(short, long)]
+        limit: Option<u16>,
     },
     Remove {
         user_id: i64,
@@ -69,18 +73,20 @@ pub async fn run_command(
             peer_id,
             relationship,
         } => {
-            profiles_client
+            let connection = profiles_client
                 .request_connection(&user_id.into(), &peer_id.into(), &relationship)
                 .await?;
+            println!("Requested connection: {:?}", connection);
         }
         ConnectionCommands::Accept {
             user_id,
             peer_id,
             relationship,
         } => {
-            profiles_client
+            let connection = profiles_client
                 .accept_connection(&user_id.into(), &peer_id.into(), &relationship)
                 .await?;
+            println!("Accepted connection: {:?}", connection);
         }
         ConnectionCommands::Reject { user_id, peer_id } => {
             profiles_client
@@ -99,15 +105,23 @@ pub async fn run_command(
         ConnectionCommands::List {
             relationship,
             user_id,
+            cursor,
+            limit,
         } => {
-            let connections = profiles_client.list_connections(&user_id.into()).await?;
+            let (connections, next_cursor, has_more) = profiles_client
+                .list_connections(&user_id.into(), cursor.as_deref(), limit)
+                .await?;
             println!(
                 "Connections for user {} with status {:?}",
                 user_id, relationship
             );
-            for (relationship, profile) in connections {
-                println!("{}: {:?}", relationship, profile);
+            for connection in connections {
+                println!(
+                    "{}: {:?}",
+                    connection.relationship, connection.profile.display_name
+                );
             }
+            println!("Next cursor: {} has_more: {}", next_cursor, has_more);
         }
         ConnectionCommands::Remove { user_id, peer_id } => {
             profiles_client
@@ -119,9 +133,11 @@ pub async fn run_command(
             peer_id,
             relationship,
         } => {
-            profiles_client
+            let connection = profiles_client
                 .update_connection(&user_id.into(), &peer_id.into(), &relationship)
                 .await?;
+
+            println!("Updated connection: {:?}", connection);
         }
     }
     Ok(())

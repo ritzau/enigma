@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use enigma_auth::UserId;
-use enigma_profiles::{EnigmaPost, EnigmaUserProfile, PostId};
+use enigma_profiles::{EnigmaConnection, EnigmaPost, EnigmaUserProfile, PostId};
 use mockall::automock;
 use std::error::Error;
 
@@ -23,47 +23,49 @@ pub trait EnigmaProfilesClient {
     async fn request_connection(
         &self,
         user_id: &UserId,
-        connection_id: &UserId,
-        kind: &str,
-    ) -> Result<(), Box<dyn Error>>;
+        peer_id: &UserId,
+        relationship: &str,
+    ) -> Result<EnigmaConnection, Box<dyn Error>>;
 
     async fn accept_connection(
         &self,
         user_id: &UserId,
-        connection_id: &UserId,
-        kind: &str,
-    ) -> Result<(), Box<dyn Error>>;
+        peer_id: &UserId,
+        relationship: &str,
+    ) -> Result<EnigmaConnection, Box<dyn Error>>;
 
     async fn reject_connection(
         &self,
         user_id: &UserId,
-        connection_id: &UserId,
+        peer_id: &UserId,
     ) -> Result<(), Box<dyn Error>>;
 
     async fn list_connections(
         &self,
         user_id: &UserId,
-    ) -> Result<Vec<(String, EnigmaUserProfile)>, Box<dyn Error>>;
+        cursor: Option<&str>,
+        limit: Option<u16>,
+    ) -> Result<(Vec<EnigmaConnection>, String, bool), Box<dyn Error>>;
 
     async fn add_connection(
         &self,
         user_id: &UserId,
-        connection_id: &UserId,
-        kind: &str,
+        peer_id: &UserId,
+        relationship: &str,
     ) -> Result<(), Box<dyn Error>>;
 
     async fn remove_connection(
         &self,
         user_id: &UserId,
-        connection_id: &UserId,
+        peer_id: &UserId,
     ) -> Result<(), Box<dyn Error>>;
 
     async fn update_connection(
         &self,
         user_id: &UserId,
-        connection_id: &UserId,
-        kind: &str,
-    ) -> Result<(), Box<dyn Error>>;
+        peer_id: &UserId,
+        relationship: &str,
+    ) -> Result<EnigmaConnection, Box<dyn Error>>;
 
     async fn create_post(&self, user_id: &UserId, content: &str) -> Result<PostId, Box<dyn Error>>;
 

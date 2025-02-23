@@ -1,5 +1,8 @@
 syntax = "proto3";
 
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
 package profiles;
 
 service Profiles {
@@ -25,6 +28,15 @@ service Profiles {
 }
 
 // Profiles
+
+message UserProfile {
+    int64 user_id = 1;
+    string legal_name = 2;
+    string display_name = 3;
+    string profile_picture_url = 4;
+    string primary_email = 5;
+    int64 date_of_birth = 6;
+}
 
 message CreateProfileRequest {
     UserProfile profile = 1;
@@ -72,6 +84,7 @@ message RequestConnectionRequest {
 }
 
 message RequestConnectionReply {
+    Connection connection = 1;
 }
 
 message AcceptConnectionRequest {
@@ -81,6 +94,7 @@ message AcceptConnectionRequest {
 }
 
 message AcceptConnectionReply {
+    Connection connection = 1;
 }
 
 message RejectConnectionRequest {
@@ -93,15 +107,26 @@ message RejectConnectionReply {
 
 message ListConnectionsRequest {
     int64 user_id = 1;
+    repeated ConnectionStatus status_filter = 2;
+    optional string cursor = 3;
+    optional uint32 limit = 4;
 }
 
 message ListConnectionsReply {
     repeated Connection connections = 1;
+    string next_cursor = 2;
+    bool has_more = 3;
 }
 
 message Connection {
-    string relationship = 1;
-    UserProfile profile = 2;
+    string connection_id = 1;
+    int64 user_id = 2;
+    int64 peer_id = 3;
+    string relationship = 4;
+    ConnectionStatus status = 5;
+    google.protobuf.Timestamp created_at = 6;
+    google.protobuf.Timestamp updated_at = 7;
+    UserProfile profile = 8;
 }
 
 message AddConnectionRequest {
@@ -111,6 +136,7 @@ message AddConnectionRequest {
 }
 
 message AddConnectionReply {
+    Connection connection = 1;
 }
 
 message RemoveConnectionRequest {
@@ -128,15 +154,7 @@ message UpdateConnectionRequest {
 }
 
 message UpdateConnectionReply {
-}
-
-message UserProfile {
-    int64 user_id = 1;
-    string legal_name = 2;
-    string display_name = 3;
-    string profile_picture_url = 4;
-    string primary_email = 5;
-    int64 date_of_birth = 6;
+    Connection connection = 1;
 }
 
 enum ConnectionStatus {
@@ -144,12 +162,12 @@ enum ConnectionStatus {
     CONNECTION_STATUS_REQUEST_SENT = 1;
     CONNECTION_STATUS_REQUESTED = 2;
     CONNECTION_STATUS_CONNECTED = 3;
-    CONNECTION_STATUS_DENIED = 4;
-    CONNECTION_STATUS_FOLLOWER = 5;
-    CONNECTION_STATUS_FOLLOWED = 6;
-    CONNECTION_STATUS_GHOST = 7;
+    CONNECTION_STATUS_DELETED = 4;
+    CONNECTION_STATUS_DENIED = 5;
+    CONNECTION_STATUS_FOLLOWER = 6;
+    CONNECTION_STATUS_FOLLOWED = 7;
+    CONNECTION_STATUS_GHOST = 8;
 }
-
 
 // Posts
 

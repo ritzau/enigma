@@ -4,7 +4,7 @@ use enigma_auth::UserId;
 use enigma_auth_client::authenticator::Authenticator;
 use enigma_auth_client::session::Session;
 use enigma_auth_grpc::auth_client::AuthClient;
-use enigma_profiles::{EnigmaPost, EnigmaUserProfile, PostId};
+use enigma_profiles::{EnigmaConnection, EnigmaPost, EnigmaUserProfile, PostId};
 use enigma_profiles_grpc::profiles_client::ProfilesClient;
 use enigma_profiles_grpc::{
     AcceptConnectionRequest, AddConnectionRequest, CreatePostRequest, CreateProfileRequest,
@@ -186,8 +186,9 @@ where
         user_id: &UserId,
         peer_id: &UserId,
         relationship: &str,
-    ) -> Result<(), Box<dyn Error>> {
-        self.authenticator
+    ) -> Result<EnigmaConnection, Box<dyn Error>> {
+        let reply = self
+            .authenticator
             .authenticated_call(
                 || RequestConnectionRequest {
                     user_id: user_id.value(),
@@ -199,9 +200,13 @@ where
                     async move { client.lock().await.request_connection(request).await }
                 },
             )
-            .await?;
+            .await?
+            .into_inner();
 
-        Ok(())
+        Ok(reply
+            .connection
+            .ok_or("Invalid response: no connection")?
+            .try_into()?)
     }
 
     async fn accept_connection(
@@ -209,8 +214,9 @@ where
         user_id: &UserId,
         peer_id: &UserId,
         relationship: &str,
-    ) -> Result<(), Box<dyn Error>> {
-        self.authenticator
+    ) -> Result<EnigmaConnection, Box<dyn Error>> {
+        let reply = self
+            .authenticator
             .authenticated_call(
                 || AcceptConnectionRequest {
                     user_id: user_id.value(),
@@ -222,9 +228,13 @@ where
                     async move { client.lock().await.accept_connection(request).await }
                 },
             )
-            .await?;
+            .await?
+            .into_inner();
 
-        Ok(())
+        Ok(reply
+            .connection
+            .ok_or("Invalid response: no connection")?
+            .try_into()?)
     }
 
     async fn reject_connection(
@@ -251,12 +261,17 @@ where
     async fn list_connections(
         &self,
         user_id: &UserId,
-    ) -> Result<Vec<(String, EnigmaUserProfile)>, Box<dyn Error>> {
+        cursor: Option<&str>,
+        limit: Option<u16>,
+    ) -> Result<(Vec<EnigmaConnection>, String, bool), Box<dyn Error>> {
         let reply = self
             .authenticator
             .authenticated_call(
                 || ListConnectionsRequest {
                     user_id: user_id.value(),
+                    status_filter: vec![],
+                    cursor: cursor.map(|c| c.to_string()),
+                    limit: limit.map(|l| l as u32),
                 },
                 |request| {
                     let client = self.client.clone();
@@ -265,22 +280,21 @@ where
             )
             .await?;
 
-        Ok(reply
-            .into_inner()
+        let reply = reply.into_inner();
+
+        let connections = reply
             .connections
-            .iter()
+            .into_iter()
             .map(|c| {
-                let Some(ref profile) = c.profile else {
+                let Some(ref _profile) = c.profile else {
                     return Err("Missing profile");
                 };
 
-                let Ok(profile) = EnigmaUserProfile::try_from(profile) else {
-                    return Err("Invalid profile");
-                };
-
-                Ok((c.relationship.clone(), profile))
+                c.try_into().map_err(|_| "Failed to convert connection")
             })
-            .try_collect()?)
+            .try_collect()?;
+
+        Ok((connections, reply.next_cursor, reply.has_more))
     }
 
     async fn add_connection(
@@ -332,8 +346,9 @@ where
         user_id: &UserId,
         peer_id: &UserId,
         relationship: &str,
-    ) -> Result<(), Box<dyn Error>> {
-        self.authenticator
+    ) -> Result<EnigmaConnection, Box<dyn Error>> {
+        let reply = self
+            .authenticator
             .authenticated_call(
                 || UpdateConnectionRequest {
                     user_id: user_id.value(),
@@ -345,9 +360,14 @@ where
                     async move { client.lock().await.update_connection(request).await }
                 },
             )
-            .await?;
+            .await?
+            .into_inner();
 
-        Ok(())
+        reply
+            .connection
+            .ok_or("Invalid response: no connection")?
+            .try_into()
+            .map_err(|e| format!("Failed to convert connection: {}", e).into())
     }
 
     async fn create_post(&self, user_id: &UserId, content: &str) -> Result<PostId, Box<dyn Error>> {

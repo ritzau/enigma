@@ -1,0 +1,96 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO connections (user_id, peer_id, relationship) VALUES ($1, $2, $3)RETURNING connection_id, user_id, peer_id, relationship, status::TEXT as status,\n                       created_at, updated_at, update_seq, NULL as legal_name, NULL as display_name,\n                       NULL as profile_picture_url, NULL as primary_email, NULL::DATE as date_of_birth",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "connection_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "user_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "peer_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 3,
+        "name": "relationship",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "status",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "created_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 6,
+        "name": "updated_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 7,
+        "name": "update_seq",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 8,
+        "name": "legal_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "display_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 10,
+        "name": "profile_picture_url",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 11,
+        "name": "primary_email",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 12,
+        "name": "date_of_birth",
+        "type_info": "Date"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      null,
+      false,
+      false,
+      false,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "33a0892d08bc0d62483f78ee0480c61722b906d9897f25b384a1dd24a008cd41"
+}
