@@ -37,53 +37,66 @@ impl Display for DatabaseError {
 
 #[async_trait]
 pub trait EnigmaProfilesDatabase {
+    // Profiles
+
     async fn create_profile(&self, profile: &EnigmaUserProfile) -> Result<(), DatabaseError>;
+
     async fn delete_profile(&self, user_id: &UserId) -> Result<(), DatabaseError>;
+
     async fn get_profile(&self, user_id: &UserId) -> Result<EnigmaUserProfile, DatabaseError>;
+
     async fn update_profile(&self, profile: &EnigmaUserProfile) -> Result<(), DatabaseError>;
+
     async fn search_profiles(&self, query: &str) -> Result<Vec<EnigmaUserProfile>, DatabaseError>;
+
+    // Connections
 
     async fn request_connection(
         &self,
         user_id: &UserId,
-        connection_id: &UserId,
-        kind: &str,
+        peer_id: &UserId,
+        relationship: &str,
     ) -> Result<(), DatabaseError>;
 
     async fn accept_connection(
         &self,
         user_id: &UserId,
-        connection_id: &UserId,
-        kind: &str,
+        peer_id: &UserId,
+        relationship: &str,
     ) -> Result<(), DatabaseError>;
 
     async fn reject_connection(
         &self,
         user_id: &UserId,
-        connection_id: &UserId,
+        peer_id: &UserId,
     ) -> Result<(), DatabaseError>;
 
     async fn add_connection(
         &self,
         user_id: &UserId,
-        connection_id: &UserId,
-        kind: &str,
+        peer_id: &UserId,
+        relationship: &str,
     ) -> Result<(), DatabaseError>;
-    async fn get_connections(
+
+    async fn list_connections(
         &self,
         user_id: &UserId,
     ) -> Result<Vec<(String, EnigmaUserProfile)>, DatabaseError>;
+
     async fn remove_connection(
         &self,
         user_id: &UserId,
-        connection_id: &UserId,
+        peer_id: &UserId,
     ) -> Result<(), DatabaseError>;
+
     async fn update_connection(
         &self,
         user_id: &UserId,
-        connection_id: &UserId,
-        kind: &str,
+        peer_id: &UserId,
+        relationship: &str,
     ) -> Result<(), DatabaseError>;
+
+    // Posts
 
     async fn create_post(&self, user_id: &UserId, content: &str) -> Result<PostId, DatabaseError>;
 

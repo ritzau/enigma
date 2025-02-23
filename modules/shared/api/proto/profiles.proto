@@ -13,7 +13,7 @@ service Profiles {
     rpc AcceptConnection (AcceptConnectionRequest) returns (AcceptConnectionReply);
     rpc RejectConnection (RejectConnectionRequest) returns (RejectConnectionReply);
 
-    rpc GetConnections (GetConnectionsRequest) returns (GetConnectionsReply);
+    rpc ListConnections (ListConnectionsRequest) returns (ListConnectionsReply);
     rpc AddConnection (AddConnectionRequest) returns (AddConnectionReply);
     rpc RemoveConnection (RemoveConnectionRequest) returns (RemoveConnectionReply);
     rpc UpdateConnection (UpdateConnectionRequest) returns (UpdateConnectionReply);
@@ -67,8 +67,8 @@ message SearchProfilesReply {
 
 message RequestConnectionRequest {
     int64 user_id = 1;
-    int64 connection_id = 2;
-    string kind = 3;
+    int64 peer_id = 2;
+    string relationship = 3;
 }
 
 message RequestConnectionReply {
@@ -76,8 +76,8 @@ message RequestConnectionReply {
 
 message AcceptConnectionRequest {
     int64 user_id = 1;
-    int64 connection_id = 2;
-    string kind = 3;
+    int64 peer_id = 2;
+    string relationship = 3;
 }
 
 message AcceptConnectionReply {
@@ -85,29 +85,29 @@ message AcceptConnectionReply {
 
 message RejectConnectionRequest {
     int64 user_id = 1;
-    int64 connection_id = 2;
+    int64 peer_id = 2;
 }
 
 message RejectConnectionReply {
 }
 
-message GetConnectionsRequest {
+message ListConnectionsRequest {
     int64 user_id = 1;
 }
 
-message GetConnectionsReply {
+message ListConnectionsReply {
     repeated Connection connections = 1;
 }
 
 message Connection {
-    string kind = 1;
+    string relationship = 1;
     UserProfile profile = 2;
 }
 
 message AddConnectionRequest {
     int64 user_id = 1;
-    int64 connection_user_id = 2;
-    string kind = 3;
+    int64 peer_id = 2;
+    string relationship = 3;
 }
 
 message AddConnectionReply {
@@ -115,7 +115,7 @@ message AddConnectionReply {
 
 message RemoveConnectionRequest {
     int64 user_id = 1;
-    int64 connection_user_id = 2;
+    int64 peer_id = 2;
 }
 
 message RemoveConnectionReply {
@@ -123,8 +123,8 @@ message RemoveConnectionReply {
 
 message UpdateConnectionRequest {
     int64 user_id = 1;
-    int64 connection_user_id = 2;
-    string kind = 3;
+    int64 peer_id = 2;
+    string relationship = 3;
 }
 
 message UpdateConnectionReply {

@@ -6,36 +6,36 @@ use std::error::Error;
 pub enum ConnectionCommands {
     Request {
         user_id: i64,
-        connection_id: i64,
-        kind: String,
+        peer_id: i64,
+        relationship: String,
     },
     Accept {
         user_id: i64,
-        connection_id: i64,
-        kind: String,
+        peer_id: i64,
+        relationship: String,
     },
     Reject {
         user_id: i64,
-        connection_id: i64,
+        peer_id: i64,
     },
     Create {
         user_id: i64,
-        connection_id: i64,
-        kind: String,
+        peer_id: i64,
+        relationship: String,
     },
     List {
         #[command(flatten)]
-        kind: Option<ConnectionKind>,
+        relationship: Option<ConnectionKind>,
         user_id: i64,
     },
     Remove {
         user_id: i64,
-        connection_id: i64,
+        peer_id: i64,
     },
     Update {
         user_id: i64,
-        connection_id: i64,
-        kind: String,
+        peer_id: i64,
+        relationship: String,
     },
 }
 
@@ -66,61 +66,61 @@ pub async fn run_command(
     match profiles_command {
         ConnectionCommands::Request {
             user_id,
-            connection_id,
-            kind,
+            peer_id,
+            relationship,
         } => {
             profiles_client
-                .request_connection(&user_id.into(), &connection_id.into(), &kind)
+                .request_connection(&user_id.into(), &peer_id.into(), &relationship)
                 .await?;
         }
         ConnectionCommands::Accept {
             user_id,
-            connection_id,
-            kind,
+            peer_id,
+            relationship,
         } => {
             profiles_client
-                .accept_connection(&user_id.into(), &connection_id.into(), &kind)
+                .accept_connection(&user_id.into(), &peer_id.into(), &relationship)
                 .await?;
         }
-        ConnectionCommands::Reject {
-            user_id,
-            connection_id,
-        } => {
+        ConnectionCommands::Reject { user_id, peer_id } => {
             profiles_client
-                .reject_connection(&user_id.into(), &connection_id.into())
+                .reject_connection(&user_id.into(), &peer_id.into())
                 .await?;
         }
         ConnectionCommands::Create {
             user_id,
-            connection_id,
-            kind,
+            peer_id,
+            relationship,
         } => {
             profiles_client
-                .add_connection(&user_id.into(), &connection_id.into(), &kind)
+                .add_connection(&user_id.into(), &peer_id.into(), &relationship)
                 .await?;
         }
-        ConnectionCommands::List { kind, user_id } => {
-            let connections = profiles_client.get_connections(&user_id.into()).await?;
-            println!("Connections for user {} with status {:?}", user_id, kind);
-            for (kind, profile) in connections {
-                println!("{}: {:?}", kind, profile);
+        ConnectionCommands::List {
+            relationship,
+            user_id,
+        } => {
+            let connections = profiles_client.list_connections(&user_id.into()).await?;
+            println!(
+                "Connections for user {} with status {:?}",
+                user_id, relationship
+            );
+            for (relationship, profile) in connections {
+                println!("{}: {:?}", relationship, profile);
             }
         }
-        ConnectionCommands::Remove {
-            user_id,
-            connection_id,
-        } => {
+        ConnectionCommands::Remove { user_id, peer_id } => {
             profiles_client
-                .remove_connection(&user_id.into(), &connection_id.into())
+                .remove_connection(&user_id.into(), &peer_id.into())
                 .await?;
         }
         ConnectionCommands::Update {
             user_id,
-            connection_id,
-            kind,
+            peer_id,
+            relationship,
         } => {
             profiles_client
-                .update_connection(&user_id.into(), &connection_id.into(), &kind)
+                .update_connection(&user_id.into(), &peer_id.into(), &relationship)
                 .await?;
         }
     }

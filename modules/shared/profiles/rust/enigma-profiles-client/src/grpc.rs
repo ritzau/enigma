@@ -8,7 +8,7 @@ use enigma_profiles::{EnigmaPost, EnigmaUserProfile, PostId};
 use enigma_profiles_grpc::profiles_client::ProfilesClient;
 use enigma_profiles_grpc::{
     AcceptConnectionRequest, AddConnectionRequest, CreatePostRequest, CreateProfileRequest,
-    DeletePostRequest, DeleteProfileRequest, GetConnectionsRequest, GetProfileRequest,
+    DeletePostRequest, DeleteProfileRequest, GetProfileRequest, ListConnectionsRequest,
     ListFeedPostsRequest, ListProfilePostsRequest, RejectConnectionRequest,
     RemoveConnectionRequest, RequestConnectionRequest, SearchProfilesRequest,
     UpdateConnectionRequest, UpdateProfileRequest, UserProfile,
@@ -184,15 +184,15 @@ where
     async fn request_connection(
         &self,
         user_id: &UserId,
-        connection_id: &UserId,
-        kind: &str,
+        peer_id: &UserId,
+        relationship: &str,
     ) -> Result<(), Box<dyn Error>> {
         self.authenticator
             .authenticated_call(
                 || RequestConnectionRequest {
                     user_id: user_id.value(),
-                    connection_id: connection_id.value(),
-                    kind: kind.to_string(),
+                    peer_id: peer_id.value(),
+                    relationship: relationship.to_string(),
                 },
                 |request| {
                     let client = self.client.clone();
@@ -207,15 +207,15 @@ where
     async fn accept_connection(
         &self,
         user_id: &UserId,
-        connection_id: &UserId,
-        kind: &str,
+        peer_id: &UserId,
+        relationship: &str,
     ) -> Result<(), Box<dyn Error>> {
         self.authenticator
             .authenticated_call(
                 || AcceptConnectionRequest {
                     user_id: user_id.value(),
-                    connection_id: connection_id.value(),
-                    kind: kind.to_string(),
+                    peer_id: peer_id.value(),
+                    relationship: relationship.to_string(),
                 },
                 |request| {
                     let client = self.client.clone();
@@ -230,13 +230,13 @@ where
     async fn reject_connection(
         &self,
         user_id: &UserId,
-        connection_id: &UserId,
+        peer_id: &UserId,
     ) -> Result<(), Box<dyn Error>> {
         self.authenticator
             .authenticated_call(
                 || RejectConnectionRequest {
                     user_id: user_id.value(),
-                    connection_id: connection_id.value(),
+                    peer_id: peer_id.value(),
                 },
                 |request| {
                     let client = self.client.clone();
@@ -248,19 +248,19 @@ where
         Ok(())
     }
 
-    async fn get_connections(
+    async fn list_connections(
         &self,
         user_id: &UserId,
     ) -> Result<Vec<(String, EnigmaUserProfile)>, Box<dyn Error>> {
         let reply = self
             .authenticator
             .authenticated_call(
-                || GetConnectionsRequest {
+                || ListConnectionsRequest {
                     user_id: user_id.value(),
                 },
                 |request| {
                     let client = self.client.clone();
-                    async move { client.lock().await.get_connections(request).await }
+                    async move { client.lock().await.list_connections(request).await }
                 },
             )
             .await?;
@@ -278,7 +278,7 @@ where
                     return Err("Invalid profile");
                 };
 
-                Ok((c.kind.clone(), profile))
+                Ok((c.relationship.clone(), profile))
             })
             .try_collect()?)
     }
@@ -286,15 +286,15 @@ where
     async fn add_connection(
         &self,
         user_id: &UserId,
-        connection_id: &UserId,
-        kind: &str,
+        peer_id: &UserId,
+        relationship: &str,
     ) -> Result<(), Box<dyn Error>> {
         self.authenticator
             .authenticated_call(
                 || AddConnectionRequest {
                     user_id: user_id.value(),
-                    connection_user_id: connection_id.value(),
-                    kind: kind.to_string(),
+                    peer_id: peer_id.value(),
+                    relationship: relationship.to_string(),
                 },
                 |request| {
                     let client = self.client.clone();
@@ -309,13 +309,13 @@ where
     async fn remove_connection(
         &self,
         user_id: &UserId,
-        connection_id: &UserId,
+        peer_id: &UserId,
     ) -> Result<(), Box<dyn Error>> {
         self.authenticator
             .authenticated_call(
                 || RemoveConnectionRequest {
                     user_id: user_id.value(),
-                    connection_user_id: connection_id.value(),
+                    peer_id: peer_id.value(),
                 },
                 |request| {
                     let client = self.client.clone();
@@ -330,15 +330,15 @@ where
     async fn update_connection(
         &self,
         user_id: &UserId,
-        connection_id: &UserId,
-        kind: &str,
+        peer_id: &UserId,
+        relationship: &str,
     ) -> Result<(), Box<dyn Error>> {
         self.authenticator
             .authenticated_call(
                 || UpdateConnectionRequest {
                     user_id: user_id.value(),
-                    connection_user_id: connection_id.value(),
-                    kind: kind.to_string(),
+                    peer_id: peer_id.value(),
+                    relationship: relationship.to_string(),
                 },
                 |request| {
                     let client = self.client.clone();
