@@ -13,6 +13,16 @@ env:
   CARGO_INCREMENTAL: 0
 
 jobs:
+  # build_ios:
+  #   runs-on: macos-15
+  #   steps:
+  #     - name: Check out repository
+  #       uses: actions/checkout@v4
+
+  #     - name: Build the project for iOS
+  #       run: |
+  #         xcodebuild -project modules/apps/iOS/Enigma/Enigma.xcodeproj
+
   rust_tasks:
     runs-on: ubuntu-latest
     strategy:

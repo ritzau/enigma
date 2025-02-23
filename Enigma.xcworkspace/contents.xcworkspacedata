@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Workspace
+   version = "1.0">
+   <FileRef
+      location = "group:modules/apps/iOS/Enigma/Enigma.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "container:modules/shared/auth/swift/enigma-auth-client-grpc">
+   </FileRef>
+   <FileRef
+      location = "container:modules/shared/profiles/swift/enigma-profiles-client-grpc">
+   </FileRef>
+</Workspace>
