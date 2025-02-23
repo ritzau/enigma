@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "UPDATE connections SET connection_kind = $3 WHERE user_id = $1 AND peer_id = $2",
+  "query": "INSERT INTO connections (user_id, peer_id, relationship) VALUES ($1, $2, $3)",
   "describe": {
     "columns": [],
     "parameters": {
@@ -12,5 +12,5 @@
     },
     "nullable": []
   },
-  "hash": "dc7949b89dc98f373b2875af91e1fbefc47f27b0b95f499529f8453d53bdc56c"
+  "hash": "99deb343ef4f21f3b761a9493e86a9ec1c712ae8c3f9a049ca9431b602a90304"
 }

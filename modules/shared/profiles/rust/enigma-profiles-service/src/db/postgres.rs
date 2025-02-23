@@ -48,10 +48,10 @@ impl PostgresProfilesDatabase {
                 connection_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 user_id BIGINT NOT NULL,
                 peer_id BIGINT NOT NULL,
-                connection_kind TEXT NOT NULL CHECK (connection_kind <> ''),
+                relationship TEXT NOT NULL CHECK (relationship <> ''),
                 status CONNECTION_STATUS NOT NULL DEFAULT 'requested',
                 created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                status_updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES accounts(user_id) ON DELETE CASCADE,
                 FOREIGN KEY (peer_id) REFERENCES accounts(user_id) ON DELETE CASCADE
             )",
@@ -83,7 +83,7 @@ impl PostgresProfilesDatabase {
         tx: &mut Transaction<'_, Postgres>, // Reuse existing transaction
         user_id: &UserId,
         peer_id: &UserId,
-        kind: &str,
+        relationship: &str,
     ) -> Result<(), DatabaseError> {
         // Lock the rows to prevent concurrent modifications
         sqlx::query!(
@@ -98,9 +98,8 @@ impl PostgresProfilesDatabase {
         .await
         .map_err(|e| DatabaseError::IllegalState("Can't lock connection rows", Some(e.into())))?;
 
-        // Update the requester's status to 'connected' (keep their original kind)
         sqlx::query!(
-            "UPDATE connections SET status = 'connected', status_updated_at = NOW()
+            "UPDATE connections SET status = 'connected', updated_at = NOW()
         WHERE user_id = $2 AND peer_id = $1",
             user_id.value(),
             peer_id.value()
@@ -111,17 +110,18 @@ impl PostgresProfilesDatabase {
             DatabaseError::IllegalState("Can't update connection status", Some(e.into()))
         })?;
 
-        // Update the acceptor's status to 'connected' and set their chosen connection kind
         sqlx::query!(
-        "UPDATE connections SET status = 'connected', connection_kind = $3, status_updated_at = NOW()
+            "UPDATE connections SET status = 'connected', relationship = $3, updated_at = NOW()
         WHERE user_id = $1 AND peer_id = $2",
-        user_id.value(),
-        peer_id.value(),
-        kind
-    )
-            .execute(tx.as_mut())
-            .await
-            .map_err(|e| DatabaseError::IllegalState("Can't update connection status", Some(e.into())))?;
+            user_id.value(),
+            peer_id.value(),
+            relationship
+        )
+        .execute(tx.as_mut())
+        .await
+        .map_err(|e| {
+            DatabaseError::IllegalState("Can't update connection status", Some(e.into()))
+        })?;
 
         Ok(())
     }
@@ -258,7 +258,7 @@ impl EnigmaProfilesDatabase for PostgresProfilesDatabase {
         &self,
         user_id: &UserId,
         peer_id: &UserId,
-        kind: &str,
+        relationship: &str,
     ) -> Result<(), DatabaseError> {
         let mut tx =
             self.pool.begin().await.map_err(|e| {
@@ -279,7 +279,7 @@ impl EnigmaProfilesDatabase for PostgresProfilesDatabase {
             == Some("request_sent".to_string())
         {
             // If mutual request detected, accept inside the same transaction
-            self.accept_connection_with_tx(&mut tx, user_id, peer_id, kind)
+            self.accept_connection_with_tx(&mut tx, user_id, peer_id, relationship)
                 .await?;
             tx.commit().await.map_err(|e| {
                 DatabaseError::IllegalState("Can't commit transaction", Some(e.into()))
@@ -289,19 +289,19 @@ impl EnigmaProfilesDatabase for PostgresProfilesDatabase {
 
         // Otherwise, insert a new connection request
         sqlx::query!(
-            "INSERT INTO connections (connection_id, user_id, peer_id, connection_kind, status)
+            "INSERT INTO connections (connection_id, user_id, peer_id, relationship, status)
         VALUES ($1, $2, $3, $4, 'request_sent')",
             Uuid::new_v4(),
             user_id.value(),
             peer_id.value(),
-            kind
+            relationship
         )
         .execute(tx.as_mut())
         .await
         .map_err(|e| DatabaseError::IllegalState("Can't insert connection", Some(e.into())))?;
 
         sqlx::query!(
-            "INSERT INTO connections (connection_id, user_id, peer_id, connection_kind, status)
+            "INSERT INTO connections (connection_id, user_id, peer_id, relationship, status)
         VALUES ($1, $2, $3, $4, 'requested')",
             Uuid::new_v4(),
             peer_id.value(),
@@ -325,14 +325,14 @@ impl EnigmaProfilesDatabase for PostgresProfilesDatabase {
         &self,
         user_id: &UserId,
         peer_id: &UserId,
-        kind: &str,
+        relationship: &str,
     ) -> Result<(), DatabaseError> {
         let mut tx =
             self.pool.begin().await.map_err(|e| {
                 DatabaseError::IllegalState("Can't create transaction", Some(e.into()))
             })?;
 
-        self.accept_connection_with_tx(&mut tx, user_id, peer_id, kind)
+        self.accept_connection_with_tx(&mut tx, user_id, peer_id, relationship)
             .await?;
 
         tx.commit()
@@ -378,7 +378,7 @@ impl EnigmaProfilesDatabase for PostgresProfilesDatabase {
 
         // Update the peer's connection request status to 'denied'
         sqlx::query!(
-            "UPDATE connections SET status = 'denied', status_updated_at = NOW()
+            "UPDATE connections SET status = 'denied', updated_at = NOW()
          WHERE user_id = $1 AND peer_id = $2",
             user_id.value(),
             peer_id.value()
@@ -399,14 +399,14 @@ impl EnigmaProfilesDatabase for PostgresProfilesDatabase {
     async fn add_connection(
         &self,
         user_id: &UserId,
-        connection_id: &UserId,
-        kind: &str,
+        peer_id: &UserId,
+        relationship: &str,
     ) -> Result<(), DatabaseError> {
         sqlx::query!(
-            "INSERT INTO connections (user_id, peer_id, connection_kind) VALUES ($1, $2, $3)",
+            "INSERT INTO connections (user_id, peer_id, relationship) VALUES ($1, $2, $3)",
             user_id.value(),
-            connection_id.value(),
-            kind
+            peer_id.value(),
+            relationship
         )
         .execute(&self.pool)
         .await
@@ -416,12 +416,12 @@ impl EnigmaProfilesDatabase for PostgresProfilesDatabase {
     }
 
     #[instrument(err, skip_all)]
-    async fn get_connections(
+    async fn list_connections(
         &self,
         user_id: &UserId,
     ) -> Result<Vec<(String, EnigmaUserProfile)>, DatabaseError> {
         let records = sqlx::query!(
-            "SELECT connection_kind, peer_id, legal_name, display_name, profile_picture_url, primary_email, date_of_birth
+            "SELECT relationship, peer_id, legal_name, display_name, profile_picture_url, primary_email, date_of_birth
             FROM connections
             INNER JOIN user_profiles ON connections.peer_id = user_profiles.user_id
             WHERE connections.user_id = $1",
@@ -432,7 +432,7 @@ impl EnigmaProfilesDatabase for PostgresProfilesDatabase {
             .into_iter()
             .map(|r| {
                 (
-                    r.connection_kind,
+                    r.relationship,
                     EnigmaUserProfile {
                         user_id: r.peer_id.into(),
                         legal_name: r.legal_name,
@@ -450,12 +450,12 @@ impl EnigmaProfilesDatabase for PostgresProfilesDatabase {
     async fn remove_connection(
         &self,
         user_id: &UserId,
-        connection_id: &UserId,
+        peer_id: &UserId,
     ) -> Result<(), DatabaseError> {
         sqlx::query!(
             "DELETE FROM connections WHERE user_id = $1 AND peer_id = $2",
             user_id.value(),
-            connection_id.value()
+            peer_id.value()
         )
         .execute(&self.pool)
         .await
@@ -468,14 +468,14 @@ impl EnigmaProfilesDatabase for PostgresProfilesDatabase {
     async fn update_connection(
         &self,
         user_id: &UserId,
-        connection_id: &UserId,
-        kind: &str,
+        peer_id: &UserId,
+        relationship: &str,
     ) -> Result<(), DatabaseError> {
         sqlx::query!(
-            "UPDATE connections SET connection_kind = $3 WHERE user_id = $1 AND peer_id = $2",
+            "UPDATE connections SET relationship = $3 WHERE user_id = $1 AND peer_id = $2",
             user_id.value(),
-            connection_id.value(),
-            kind
+            peer_id.value(),
+            relationship
         )
         .execute(&self.pool)
         .await

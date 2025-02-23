@@ -7,10 +7,10 @@ use enigma_profiles_grpc::profiles_server::Profiles;
 use enigma_profiles_grpc::{
     AcceptConnectionReply, AcceptConnectionRequest, AddConnectionReply, AddConnectionRequest,
     Connection, CreatePostReply, CreatePostRequest, CreateProfileReply, CreateProfileRequest,
-    DeletePostReply, DeletePostRequest, DeleteProfileReply, DeleteProfileRequest,
-    GetConnectionsReply, GetConnectionsRequest, GetProfileReply, GetProfileRequest,
-    ListFeedPostsReply, ListFeedPostsRequest, ListProfilePostsReply, ListProfilePostsRequest,
-    RejectConnectionReply, RejectConnectionRequest, RemoveConnectionReply, RemoveConnectionRequest,
+    DeletePostReply, DeletePostRequest, DeleteProfileReply, DeleteProfileRequest, GetProfileReply,
+    GetProfileRequest, ListConnectionsReply, ListConnectionsRequest, ListFeedPostsReply,
+    ListFeedPostsRequest, ListProfilePostsReply, ListProfilePostsRequest, RejectConnectionReply,
+    RejectConnectionRequest, RemoveConnectionReply, RemoveConnectionRequest,
     RequestConnectionReply, RequestConnectionRequest, SearchProfilesReply, SearchProfilesRequest,
     UpdateConnectionReply, UpdateConnectionRequest, UpdateProfileReply, UpdateProfileRequest,
 };
@@ -145,14 +145,14 @@ where
     ) -> Result<Response<RequestConnectionReply>, Status> {
         let parameters = request.get_ref();
         let user_id = UserId::from(parameters.user_id);
-        let connection_id = UserId::from(parameters.connection_id);
-        let kind = &parameters.kind;
+        let peer_id = UserId::from(parameters.peer_id);
+        let relationship = &parameters.relationship;
 
         verify_id_or_admin(&request, &user_id).await?;
 
         let result = self
             .profiles_service
-            .request_connection(&user_id, &connection_id, kind)
+            .request_connection(&user_id, &peer_id, relationship)
             .await;
         result.map_err(|_| Status::invalid_argument("Cannot request connection"))?;
 
@@ -165,14 +165,14 @@ where
     ) -> Result<Response<AcceptConnectionReply>, Status> {
         let parameters = request.get_ref();
         let user_id = UserId::from(parameters.user_id);
-        let connection_id = UserId::from(parameters.connection_id);
-        let kind = &parameters.kind;
+        let peer_id = UserId::from(parameters.peer_id);
+        let relationship = &parameters.relationship;
 
         verify_id_or_admin(&request, &user_id).await?;
 
         let result = self
             .profiles_service
-            .accept_connection(&user_id, &connection_id, kind)
+            .accept_connection(&user_id, &peer_id, relationship)
             .await;
         result.map_err(|_| Status::invalid_argument("Cannot request connection"))?;
 
@@ -185,13 +185,13 @@ where
     ) -> Result<Response<RejectConnectionReply>, Status> {
         let parameters = request.get_ref();
         let user_id = UserId::from(parameters.user_id);
-        let connection_id = UserId::from(parameters.connection_id);
+        let peer_id = UserId::from(parameters.peer_id);
 
         verify_id_or_admin(&request, &user_id).await?;
 
         let result = self
             .profiles_service
-            .reject_connection(&user_id, &connection_id)
+            .reject_connection(&user_id, &peer_id)
             .await;
         result.map_err(|_| Status::invalid_argument("Cannot reject connection"))?;
 
@@ -199,29 +199,29 @@ where
     }
 
     #[instrument(err, skip_all)]
-    async fn get_connections(
+    async fn list_connections(
         &self,
-        request: Request<GetConnectionsRequest>,
-    ) -> Result<Response<GetConnectionsReply>, Status> {
+        request: Request<ListConnectionsRequest>,
+    ) -> Result<Response<ListConnectionsReply>, Status> {
         let parameters = request.get_ref();
         let user_id = UserId::from(parameters.user_id);
 
         verify_id_or_admin(&request, &user_id).await?;
 
-        let result = self.profiles_service.get_connections(&user_id).await;
+        let result = self.profiles_service.list_connections(&user_id).await;
         let proto_connections = result.map_err(|_| Status::internal("Cannot get connections"))?;
         let connections = proto_connections
             .into_iter()
-            .map(|(kind, profile)| {
+            .map(|(relationship, profile)| {
                 let profile = profile.try_into()?;
                 Ok::<Connection, Status>(Connection {
-                    kind,
+                    relationship,
                     profile: Some(profile),
                 })
             })
             .try_collect()?;
 
-        Ok(Response::new(GetConnectionsReply { connections }))
+        Ok(Response::new(ListConnectionsReply { connections }))
     }
 
     #[instrument(err, skip_all)]
@@ -231,14 +231,14 @@ where
     ) -> Result<Response<AddConnectionReply>, Status> {
         let parameters = request.get_ref();
         let user_id = UserId::from(parameters.user_id);
-        let connection_id = UserId::from(parameters.connection_user_id);
-        let kind = &parameters.kind;
+        let peer_id = UserId::from(parameters.peer_id);
+        let relationship = &parameters.relationship;
 
         verify_id_or_admin(&request, &user_id).await?;
 
         let result = self
             .profiles_service
-            .add_connection(&user_id, &connection_id, kind)
+            .add_connection(&user_id, &peer_id, relationship)
             .await;
         result.map_err(|_| Status::invalid_argument("Cannot add connection"))?;
 
@@ -252,13 +252,13 @@ where
     ) -> Result<Response<RemoveConnectionReply>, Status> {
         let parameters = request.get_ref();
         let user_id = UserId::from(parameters.user_id);
-        let connection_id = UserId::from(parameters.connection_user_id);
+        let peer_id = UserId::from(parameters.peer_id);
 
         verify_id_or_admin(&request, &user_id).await?;
 
         let result = self
             .profiles_service
-            .remove_connection(&user_id, &connection_id)
+            .remove_connection(&user_id, &peer_id)
             .await;
         result.map_err(|_| Status::invalid_argument("Cannot remove connection"))?;
 
@@ -272,14 +272,14 @@ where
     ) -> Result<Response<UpdateConnectionReply>, Status> {
         let parameters = request.get_ref();
         let user_id = UserId::from(parameters.user_id);
-        let connection_id = UserId::from(parameters.connection_user_id);
-        let kind = &parameters.kind;
+        let peer_id = UserId::from(parameters.peer_id);
+        let relationship = &parameters.relationship;
 
         verify_id_or_admin(&request, &user_id).await?;
 
         let result = self
             .profiles_service
-            .update_connection(&user_id, &connection_id, kind)
+            .update_connection(&user_id, &peer_id, relationship)
             .await;
         result.map_err(|_| Status::invalid_argument("Cannot update connection"))?;
 

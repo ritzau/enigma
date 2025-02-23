@@ -22,6 +22,8 @@ impl<DB> EnigmaProfilesService for DefaultProfilesService<DB>
 where
     DB: EnigmaProfilesDatabase + Send + Sync,
 {
+    // Profiles
+
     async fn create_profile(&self, profile: &EnigmaUserProfile) -> Result<(), DatabaseError> {
         self.db.create_profile(profile).await
     }
@@ -42,76 +44,80 @@ where
         self.db.search_profiles(query).await
     }
 
+    // Connections
+
     async fn request_connection(
         &self,
         user_id: &UserId,
-        connection_id: &UserId,
-        kind: &str,
+        peer_id: &UserId,
+        relationship: &str,
     ) -> Result<(), DatabaseError> {
         self.db
-            .request_connection(user_id, connection_id, kind)
+            .request_connection(user_id, peer_id, relationship)
             .await
     }
 
     async fn accept_connection(
         &self,
         user_id: &UserId,
-        connection_id: &UserId,
-        kind: &str,
+        peer_id: &UserId,
+        relationship: &str,
     ) -> Result<(), DatabaseError> {
         self.db
-            .accept_connection(user_id, connection_id, kind)
+            .accept_connection(user_id, peer_id, relationship)
             .await
     }
 
     async fn reject_connection(
         &self,
         user_id: &UserId,
-        connection_id: &UserId,
+        peer_id: &UserId,
     ) -> Result<(), DatabaseError> {
-        self.db.reject_connection(user_id, connection_id).await
+        self.db.reject_connection(user_id, peer_id).await
     }
 
-    async fn get_connections(
+    async fn list_connections(
         &self,
         user_id: &UserId,
     ) -> Result<Vec<(String, EnigmaUserProfile)>, DatabaseError> {
-        self.db.get_connections(user_id).await
+        self.db.list_connections(user_id).await
     }
 
     async fn add_connection(
         &self,
         user_id: &UserId,
-        connection_id: &UserId,
-        kind: &str,
+        peer_id: &UserId,
+        relationship: &str,
     ) -> Result<(), DatabaseError> {
-        if user_id == connection_id {
+        if user_id == peer_id {
             return Err(DatabaseError::CannotConnectToSelf(
                 "Cannot connect to self",
                 None,
             ));
         }
-        self.db.add_connection(user_id, connection_id, kind).await
+        self.db.add_connection(user_id, peer_id, relationship).await
     }
 
     async fn remove_connection(
         &self,
         user_id: &UserId,
-        connection_id: &UserId,
+        peer_id: &UserId,
     ) -> Result<(), DatabaseError> {
-        self.db.remove_connection(user_id, connection_id).await
+        self.db.remove_connection(user_id, peer_id).await
     }
 
     async fn update_connection(
         &self,
         user_id: &UserId,
-        connection_id: &UserId,
-        kind: &str,
+        peer_id: &UserId,
+        relationship: &str,
     ) -> Result<(), DatabaseError> {
         self.db
-            .update_connection(user_id, connection_id, kind)
+            .update_connection(user_id, peer_id, relationship)
             .await
     }
+
+    // Posts
 
     async fn create_post(&self, user_id: &UserId, content: &str) -> Result<PostId, DatabaseError> {
         self.db.create_post(user_id, content).await

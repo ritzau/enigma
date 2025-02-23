@@ -40,7 +40,7 @@ pub trait EnigmaProfilesClient {
         connection_id: &UserId,
     ) -> Result<(), Box<dyn Error>>;
 
-    async fn get_connections(
+    async fn list_connections(
         &self,
         user_id: &UserId,
     ) -> Result<Vec<(String, EnigmaUserProfile)>, Box<dyn Error>>;
