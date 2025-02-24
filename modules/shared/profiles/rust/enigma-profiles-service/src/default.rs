@@ -2,7 +2,7 @@ use crate::db::{DatabaseError, EnigmaProfilesDatabase};
 use crate::EnigmaProfilesService;
 use async_trait::async_trait;
 use enigma_auth::UserId;
-use enigma_profiles::{EnigmaPost, EnigmaUserProfile, PostId};
+use enigma_profiles::{EnigmaConnection, EnigmaPost, EnigmaUserProfile, PostId};
 
 pub struct DefaultProfilesService<DB>
 where
@@ -51,7 +51,7 @@ where
         user_id: &UserId,
         peer_id: &UserId,
         relationship: &str,
-    ) -> Result<(), DatabaseError> {
+    ) -> Result<EnigmaConnection, DatabaseError> {
         self.db
             .request_connection(user_id, peer_id, relationship)
             .await
@@ -62,7 +62,7 @@ where
         user_id: &UserId,
         peer_id: &UserId,
         relationship: &str,
-    ) -> Result<(), DatabaseError> {
+    ) -> Result<EnigmaConnection, DatabaseError> {
         self.db
             .accept_connection(user_id, peer_id, relationship)
             .await
@@ -79,7 +79,7 @@ where
     async fn list_connections(
         &self,
         user_id: &UserId,
-    ) -> Result<Vec<(String, EnigmaUserProfile)>, DatabaseError> {
+    ) -> Result<Vec<EnigmaConnection>, DatabaseError> {
         self.db.list_connections(user_id).await
     }
 
@@ -88,7 +88,7 @@ where
         user_id: &UserId,
         peer_id: &UserId,
         relationship: &str,
-    ) -> Result<(), DatabaseError> {
+    ) -> Result<EnigmaConnection, DatabaseError> {
         if user_id == peer_id {
             return Err(DatabaseError::CannotConnectToSelf(
                 "Cannot connect to self",
@@ -111,7 +111,7 @@ where
         user_id: &UserId,
         peer_id: &UserId,
         relationship: &str,
-    ) -> Result<(), DatabaseError> {
+    ) -> Result<EnigmaConnection, DatabaseError> {
         self.db
             .update_connection(user_id, peer_id, relationship)
             .await

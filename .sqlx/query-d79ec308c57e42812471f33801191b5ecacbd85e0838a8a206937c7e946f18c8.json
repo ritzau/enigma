@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE connections SET status = 'connected', updated_at = NOW(), update_seq = DEFAULT\n        WHERE user_id = $2 AND peer_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d79ec308c57e42812471f33801191b5ecacbd85e0838a8a206937c7e946f18c8"
+}

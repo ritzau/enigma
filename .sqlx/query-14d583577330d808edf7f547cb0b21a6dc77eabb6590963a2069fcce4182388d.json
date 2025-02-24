@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE connections\n            SET status = 'denied', updated_at = NOW(), update_seq = DEFAULT\n            WHERE user_id = $1 AND peer_id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "14d583577330d808edf7f547cb0b21a6dc77eabb6590963a2069fcce4182388d"
+}

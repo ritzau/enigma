@@ -1,7 +1,7 @@
 use crate::db::DatabaseError;
 use async_trait::async_trait;
 use enigma_auth::UserId;
-use enigma_profiles::{EnigmaPost, EnigmaUserProfile, PostId};
+use enigma_profiles::{EnigmaConnection, EnigmaPost, EnigmaUserProfile, PostId};
 
 pub mod db;
 pub mod default;
@@ -30,14 +30,14 @@ pub trait EnigmaProfilesService {
         user_id: &UserId,
         peer_id: &UserId,
         relationship: &str,
-    ) -> Result<(), DatabaseError>;
+    ) -> Result<EnigmaConnection, DatabaseError>;
 
     async fn accept_connection(
         &self,
         user_id: &UserId,
         peer_id: &UserId,
         relationship: &str,
-    ) -> Result<(), DatabaseError>;
+    ) -> Result<EnigmaConnection, DatabaseError>;
 
     async fn reject_connection(
         &self,
@@ -48,13 +48,14 @@ pub trait EnigmaProfilesService {
     async fn list_connections(
         &self,
         user_id: &UserId,
-    ) -> Result<Vec<(String, EnigmaUserProfile)>, DatabaseError>;
+    ) -> Result<Vec<EnigmaConnection>, DatabaseError>;
+
     async fn add_connection(
         &self,
         user_id: &UserId,
         peer_id: &UserId,
         relationship: &str,
-    ) -> Result<(), DatabaseError>;
+    ) -> Result<EnigmaConnection, DatabaseError>;
 
     async fn remove_connection(
         &self,
@@ -67,7 +68,7 @@ pub trait EnigmaProfilesService {
         user_id: &UserId,
         peer_id: &UserId,
         relationship: &str,
-    ) -> Result<(), DatabaseError>;
+    ) -> Result<EnigmaConnection, DatabaseError>;
 
     // Posts
 
