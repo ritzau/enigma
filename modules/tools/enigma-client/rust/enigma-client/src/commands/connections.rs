@@ -69,18 +69,20 @@ pub async fn run_command(
             peer_id,
             relationship,
         } => {
-            profiles_client
+            let connection = profiles_client
                 .request_connection(&user_id.into(), &peer_id.into(), &relationship)
                 .await?;
+            println!("Requested connection: {:?}", connection);
         }
         ConnectionCommands::Accept {
             user_id,
             peer_id,
             relationship,
         } => {
-            profiles_client
+            let connection = profiles_client
                 .accept_connection(&user_id.into(), &peer_id.into(), &relationship)
                 .await?;
+            println!("Accepted connection: {:?}", connection);
         }
         ConnectionCommands::Reject { user_id, peer_id } => {
             profiles_client
@@ -92,9 +94,10 @@ pub async fn run_command(
             peer_id,
             relationship,
         } => {
-            profiles_client
+            let connection = profiles_client
                 .add_connection(&user_id.into(), &peer_id.into(), &relationship)
                 .await?;
+            println!("Added connection: {:?}", connection);
         }
         ConnectionCommands::List {
             relationship,
@@ -119,9 +122,10 @@ pub async fn run_command(
             peer_id,
             relationship,
         } => {
-            profiles_client
+            let connection = profiles_client
                 .update_connection(&user_id.into(), &peer_id.into(), &relationship)
                 .await?;
+            println!("Updated connection: {:?}", connection);
         }
     }
     Ok(())

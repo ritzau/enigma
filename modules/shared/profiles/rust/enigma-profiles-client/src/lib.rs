@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use enigma_auth::UserId;
-use enigma_profiles::{EnigmaPost, EnigmaUserProfile, PostId};
+use enigma_profiles::{EnigmaConnection, EnigmaPost, EnigmaUserProfile, PostId};
 use mockall::automock;
 use std::error::Error;
 
@@ -31,14 +31,14 @@ pub trait EnigmaProfilesClient {
         user_id: &UserId,
         peer_id: &UserId,
         relationship: &str,
-    ) -> Result<(), Box<dyn Error>>;
+    ) -> Result<EnigmaConnection, Box<dyn Error>>;
 
     async fn accept_connection(
         &self,
         user_id: &UserId,
         peer_id: &UserId,
         relationship: &str,
-    ) -> Result<(), Box<dyn Error>>;
+    ) -> Result<EnigmaConnection, Box<dyn Error>>;
 
     async fn reject_connection(
         &self,
@@ -56,7 +56,7 @@ pub trait EnigmaProfilesClient {
         user_id: &UserId,
         peer_id: &UserId,
         relationship: &str,
-    ) -> Result<(), Box<dyn Error>>;
+    ) -> Result<EnigmaConnection, Box<dyn Error>>;
 
     async fn remove_connection(
         &self,
@@ -69,7 +69,7 @@ pub trait EnigmaProfilesClient {
         user_id: &UserId,
         peer_id: &UserId,
         relationship: &str,
-    ) -> Result<(), Box<dyn Error>>;
+    ) -> Result<EnigmaConnection, Box<dyn Error>>;
 
     ////////////////////////////////////////////////////////////////////////////////
     // Posts

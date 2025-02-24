@@ -4,7 +4,7 @@ use enigma_auth::UserId;
 use enigma_auth_client::authenticator::Authenticator;
 use enigma_auth_client::session::Session;
 use enigma_auth_grpc::auth_client::AuthClient;
-use enigma_profiles::{EnigmaPost, EnigmaUserProfile, PostId};
+use enigma_profiles::{EnigmaConnection, EnigmaPost, EnigmaUserProfile, PostId};
 use enigma_profiles_grpc::profiles_client::ProfilesClient;
 use enigma_profiles_grpc::{
     AcceptConnectionRequest, AddConnectionRequest, CreatePostRequest, CreateProfileRequest,
@@ -186,8 +186,9 @@ where
         user_id: &UserId,
         peer_id: &UserId,
         relationship: &str,
-    ) -> Result<(), Box<dyn Error>> {
-        self.authenticator
+    ) -> Result<EnigmaConnection, Box<dyn Error>> {
+        let reply = self
+            .authenticator
             .authenticated_call(
                 || RequestConnectionRequest {
                     user_id: user_id.value(),
@@ -199,9 +200,14 @@ where
                     async move { client.lock().await.request_connection(request).await }
                 },
             )
-            .await?;
+            .await?
+            .into_inner();
 
-        Ok(())
+        reply
+            .connection
+            .ok_or("Invalid response: missing connection")?
+            .try_into()
+            .map_err(|s| format!("Invalid connection response: {}", s).into())
     }
 
     async fn accept_connection(
@@ -209,8 +215,9 @@ where
         user_id: &UserId,
         peer_id: &UserId,
         relationship: &str,
-    ) -> Result<(), Box<dyn Error>> {
-        self.authenticator
+    ) -> Result<EnigmaConnection, Box<dyn Error>> {
+        let reply = self
+            .authenticator
             .authenticated_call(
                 || AcceptConnectionRequest {
                     user_id: user_id.value(),
@@ -222,9 +229,14 @@ where
                     async move { client.lock().await.accept_connection(request).await }
                 },
             )
-            .await?;
+            .await?
+            .into_inner();
 
-        Ok(())
+        reply
+            .connection
+            .ok_or("Invalid response: missing connection")?
+            .try_into()
+            .map_err(|s| format!("Invalid connection response: {}", s).into())
     }
 
     async fn reject_connection(
@@ -268,7 +280,7 @@ where
         Ok(reply
             .into_inner()
             .connections
-            .iter()
+            .into_iter()
             .map(|c| {
                 let Some(ref profile) = c.profile else {
                     return Err("Missing profile");
@@ -278,7 +290,7 @@ where
                     return Err("Invalid profile");
                 };
 
-                Ok((c.relationship.clone(), profile))
+                Ok((c.relationship, profile))
             })
             .try_collect()?)
     }
@@ -288,8 +300,9 @@ where
         user_id: &UserId,
         peer_id: &UserId,
         relationship: &str,
-    ) -> Result<(), Box<dyn Error>> {
-        self.authenticator
+    ) -> Result<EnigmaConnection, Box<dyn Error>> {
+        let reply = self
+            .authenticator
             .authenticated_call(
                 || AddConnectionRequest {
                     user_id: user_id.value(),
@@ -301,9 +314,14 @@ where
                     async move { client.lock().await.add_connection(request).await }
                 },
             )
-            .await?;
+            .await?
+            .into_inner();
 
-        Ok(())
+        reply
+            .connection
+            .ok_or("Invalid response: missing connection")?
+            .try_into()
+            .map_err(|s| format!("Invalid connection response: {}", s).into())
     }
 
     async fn remove_connection(
@@ -332,8 +350,9 @@ where
         user_id: &UserId,
         peer_id: &UserId,
         relationship: &str,
-    ) -> Result<(), Box<dyn Error>> {
-        self.authenticator
+    ) -> Result<EnigmaConnection, Box<dyn Error>> {
+        let reply = self
+            .authenticator
             .authenticated_call(
                 || UpdateConnectionRequest {
                     user_id: user_id.value(),
@@ -345,9 +364,14 @@ where
                     async move { client.lock().await.update_connection(request).await }
                 },
             )
-            .await?;
+            .await?
+            .into_inner();
 
-        Ok(())
+        reply
+            .connection
+            .ok_or("Invalid response: missing connection")?
+            .try_into()
+            .map_err(|s| format!("Invalid connection response: {}", s).into())
     }
 
     async fn create_post(&self, user_id: &UserId, content: &str) -> Result<PostId, Box<dyn Error>> {
