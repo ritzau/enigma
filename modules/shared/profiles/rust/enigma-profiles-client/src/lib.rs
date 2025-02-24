@@ -10,6 +10,9 @@ pub mod grpc;
 #[async_trait]
 #[automock]
 pub trait EnigmaProfilesClient {
+    ////////////////////////////////////////////////////////////////////////////////
+    // Profiles
+
     async fn create_profile(&self, profile: &EnigmaUserProfile) -> Result<(), Box<dyn Error>>;
 
     async fn delete_profile(&self, user_id: &UserId) -> Result<(), Box<dyn Error>>;
@@ -20,24 +23,27 @@ pub trait EnigmaProfilesClient {
 
     async fn search_profiles(&self, query: &str) -> Result<Vec<EnigmaUserProfile>, Box<dyn Error>>;
 
+    ////////////////////////////////////////////////////////////////////////////////
+    // Connections
+
     async fn request_connection(
         &self,
         user_id: &UserId,
-        connection_id: &UserId,
-        kind: &str,
+        peer_id: &UserId,
+        relationship: &str,
     ) -> Result<(), Box<dyn Error>>;
 
     async fn accept_connection(
         &self,
         user_id: &UserId,
-        connection_id: &UserId,
-        kind: &str,
+        peer_id: &UserId,
+        relationship: &str,
     ) -> Result<(), Box<dyn Error>>;
 
     async fn reject_connection(
         &self,
         user_id: &UserId,
-        connection_id: &UserId,
+        peer_id: &UserId,
     ) -> Result<(), Box<dyn Error>>;
 
     async fn list_connections(
@@ -48,22 +54,25 @@ pub trait EnigmaProfilesClient {
     async fn add_connection(
         &self,
         user_id: &UserId,
-        connection_id: &UserId,
-        kind: &str,
+        peer_id: &UserId,
+        relationship: &str,
     ) -> Result<(), Box<dyn Error>>;
 
     async fn remove_connection(
         &self,
         user_id: &UserId,
-        connection_id: &UserId,
+        peer_id: &UserId,
     ) -> Result<(), Box<dyn Error>>;
 
     async fn update_connection(
         &self,
         user_id: &UserId,
-        connection_id: &UserId,
-        kind: &str,
+        peer_id: &UserId,
+        relationship: &str,
     ) -> Result<(), Box<dyn Error>>;
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // Posts
 
     async fn create_post(&self, user_id: &UserId, content: &str) -> Result<PostId, Box<dyn Error>>;
 
